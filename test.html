@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Withdraw Interface</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+</head>
+<body>
+<h1>Withdraw SPL Tokens</h1>
+<button onclick="testDerive()">Test Derive PDA</button>
+
+<script>
+    const Buffer = {
+        from: (data) => {
+            return new TextEncoder().encode(data);
+        }
+    };
+    
+    async function testDerive() {
+        const mint      = new solanaWeb3.PublicKey("4Kz3ewbTEM5ZSh9fzbF9u3jkebdzexjPPdBKXrani38j");
+        const programId = new solanaWeb3.PublicKey("DrufTFEJCYDvHbLnhbv3kbNLrgFUUvSaK6c23rihC3BH");
+        
+        const [vaultAuthority] = solanaWeb3.PublicKey.findProgramAddressSync(
+            [Buffer.from("PoliCromixPB"), mint.toBuffer()],
+            programId
+        );
+        
+        console.log("Derived Vault Authority PDA:", vaultAuthority.toBase58());
+    }
+</script>
+</body>
+</html>

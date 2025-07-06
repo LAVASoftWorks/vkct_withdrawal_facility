@@ -5,40 +5,6 @@
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
-<body>
-
-<h1>
-    Withdraw piggy bank funds
-    <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none">Disconnect</button>
-</h1>
-
-<p>
-    Your wallet:
-    <input type="text" id="dest" disabled value="" style="width: 360px">
-</p>
-<p>
-    NFT address:
-    <input type="text" id="nft_address" style="width: 360px"
-           value="719ZMk2iSbnvrLtpMnXNGv9R2NvwPsNCEL1PStMM6hBN">
-</p>
-<div id="step1">
-    <p>
-        NFT metadata URI:
-        <input type="text" id="metadata_uri" style="width: 360px"
-               value="https://gateway.irys.xyz/2yXRkQduYo8FfV3CNzJkNrfC4xqNLJWcTezbLFf4Afre">
-    </p>
-    <button onclick="getNFTmetadata()">Fetch info</button>
-</div>
-
-<div id="step2" style="display: none">
-    <div id="tokensList"></div>
-    <p>
-        Amount:
-        <input id="amount" type="number" step="any" value="0">
-    </p>
-    <button onclick="withdraw()">Withdraw</button>
-</div>
-
 <script>
     //--------------------------------//
     // INITIAL DEFINITIONS USED BELOW //
@@ -46,10 +12,12 @@
     
     const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
     let wallet = null; // Will hold the Phantom wallet public key
+    const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
     
-    const VAULT_PROGRAM_ID  = "7cuCGsJ7Z3LdEKC2FWCR6DD6RbGZFoQzjehyVyxSweu2"; // Update this
-    const VAULT_PROGRAM_KEY = "PoliCromixPiggyBankV3";                        // Update this
-    const IDL_DISCRIMINATOR = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
+    const PIGGYBANK_PROGRAM_ID = "2NBAyDg3dpW6AkJLYasP6X2oosRfBRXk4UKeoEZugn56"; // Update this
+    const IDL_DISCRIMINATOR    = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
+    const PIGGYBANK_TRAIT_KEY  = "Piggy bank address";                           
+    //    ^-- The trait type in the NFT metadata that has the PDA
     
     const SUPPORTED_TOKENS = {
         "USDECE": {address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
@@ -60,22 +28,54 @@
     const TOKEN_PROGRAM_ID            = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
     const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
     // ^-------------------------------
-    
-    // Warn: don't save the API key!
-    const HELIUS_API_URL    = "https://devnet.helius-rpc.com/?api-key=43cc0f83-b7c7-4a33-93d3-1ea5f0a6ef26";
-    
-    // Solana web3.js already included in your HTML, so use:
-    const { PublicKey } = solanaWeb3;
-    
-    window.onload = async () => { await connectWallet(); };
 </script>
+<body>
+
+<h1>
+    Withdraw piggy bank funds
+</h1>
+
+<div id="piggybank_withdrawal_widget">
+    <p>
+        NFT address:
+        <input type="text" id="nft_address" style="width: 360px"
+               value="7GvHBvXHFvFrmLQvmuAB2Kkvffoq5SZopR7zo3grmqQk">
+    </p>
+    <div id="step1">
+        <p>
+            NFT metadata URI:
+            <input type="text" id="metadata_uri" style="width: 360px"
+                   value="https://gateway.irys.xyz/CxSAAyNQruMrMEAvbxpdQwUmtxNxG7dgHWgo1buxG5v8">
+        </p>
+        <button onclick="getNFTmetadata()">Fetch info</button>
+    </div>
+    
+    <div id="step2" style="display: none">
+        <div id="tokensList"></div>
+        <p>
+            Your wallet:
+            <input type="text" id="dest" disabled value="" style="width: 360px">
+            <button id="connectWallet"    onclick="connectWallet()">✔️ Connect wallet</button>
+            <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none">⛔ Disconnect wallet</button>
+        </p>
+        <p>
+            Amount:
+            <input id="amount" type="number" step="any" value="0">
+        </p>
+        <p id="withdrawalResult">
+            <button id="witdhraw_button" onclick="withdraw()" style="display: none">💸 Withdraw</button>
+        </p>
+    </div>
+</div>
 
 <script>
     //--------------------//
     // User interface ops //
     //--------------------//
     
-    function getNFTmetadata()
+    let vaultPDA = null;
+    
+    async function getNFTmetadata()
     {
         let uri = $('#metadata_uri').val().trim();
         if( uri === '' )
@@ -92,37 +92,76 @@
                 return;
             }
             
-            let addresses = {};
             for(let i in data.attributes)
             {
                 let attr   = data.attributes[i];
-                let symbol = attr.trait_type.split(' ')[0];
-                addresses[symbol] = attr.value;
+                if( attr.trait_type === PIGGYBANK_TRAIT_KEY )
+                {
+                    vaultPDA = attr.value;
+                    break;
+                }
             }
-            populateTokenDropdown(addresses);
+            
+            if( vaultPDA === null )
+            {
+                alert("Coul'nt find the piggy bank address in the NFT metadata.");
+                return;
+            }
+            
+            populateTokenDropdown();
         })
         .fail(function(error) {
             alert(`Error: ${error.status}: ${error.statusText}`);
         });
     }
     
-    function populateTokenDropdown(src_addresses)
+    async function populateTokenDropdown()
     {
         const $container = $("#tokensList");
-        for(let symbol in src_addresses)
+        
+        for(let symbol in SUPPORTED_TOKENS)
         {
-            let addr = src_addresses[symbol];
+            const mintaddr = SUPPORTED_TOKENS[symbol].address;
+            const mint     = new solanaWeb3.PublicKey(mintaddr);
+            const pda      = new solanaWeb3.PublicKey(vaultPDA);
+            const ata      = await getAssociatedTokenAddress(mint, pda);
+            const addr     = ata.toBase58();
+            const decimals = SUPPORTED_TOKENS[symbol].decimals;
+            
             let short_addr = addr.substring(0, 4) + '...' + addr.substring(addr.length - 4);
+            
+            const accountInfo = await connection.getAccountInfo(ata);
+            
+            if ( ! accountInfo ) {
+                console.log(`Account info for ${symbol} ATA (${addr}) not found!`);
+                continue;
+            }
+            
+            const { amount } = parseSplTokenAccountData(accountInfo.data);
+            
+            // Human friendly balance
+            const displayAmount = Number(amount) / Math.pow(10, decimals);
+            const balance       = displayAmount.toString();
+            
             $container.append(`
-                <p>
-                    <label class="tokenElement" data-symbol="${symbol}" data-decimals="">
-                        <input type="radio" name="selectedToken" value="" data-pda="${addr}">
-                        ${symbol} [${short_addr}] Balance: <span class="balance">N/A</span>
+                <p class="pb_item">
+                    <label class="tokenElement" data-symbol="${symbol}" 
+                           data-mint="${mintaddr}"
+                           data-decimals="${decimals}">
+                        <input type="radio" name="selectedToken" value="${ata}">
+                        ${symbol} [${short_addr}] Balance: <span class="balance">${balance}</span>
                     </label>
                 </p>
             `);
-            getSplTokenBalance(symbol, addr);
+            
         }
+        
+        if( $container.find('.pb_item').length === 0 )
+        {
+            $container.append(`<p class="error">No piggy bank info found.</p>`);
+            return
+        }
+        
         $container.find('input:first').prop('checked', true);
         
         $('#step1').hide();
@@ -142,75 +181,6 @@
         .getBigUint64(0, true); // true = little-endian
         return { mint, owner, amount };
     }
-    
-    function parseSplTokenMintData(data)
-    {
-        // Decimals: byte 44
-        const decimals = data[44];
-        return { decimals };
-    }
-    
-    async function getSplTokenBalance(symbol, accountAddress)
-    {
-        const connection  = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
-        const tokenMint   = new solanaWeb3.PublicKey(SUPPORTED_TOKENS[symbol].address);
-        const vaultPDA    = new solanaWeb3.PublicKey(accountAddress);
-        const splTokenAta = await getAssociatedTokenAddress(tokenMint, vaultPDA, true);
-        
-        // const PIGGYBANK_PROGRAM_ID = new PublicKey("7cuCGsJ7Z3LdEKC2FWCR6DD6RbGZFoQzjehyVyxSweu2");
-        // const NFT_MINT_ADDRESS = document.getElementById("nft_address").value.trim();
-        // const nftMint = new solanaWeb3.PublicKey(NFT_MINT_ADDRESS);
-        // const [calculatedPda] = PublicKey.findProgramAddressSync(
-        //     [new TextEncoder().encode("PoliCromixPiggyBankV3"), nftMint.toBuffer(), tokenMint.toBuffer()],
-        //     PIGGYBANK_PROGRAM_ID
-        // );
-        //
-        // const splTokenAta2 = await getAssociatedTokenAddress(tokenMint, calculatedPda, true);
-        //
-        // console.log(
-        //     `${symbol} addresses:\n` +
-        //     `- Token mint: ${tokenMint.toBase58()}\n` +
-        //     `- Their PDA:  ${calculatedPda.toBase58()}\n` +
-        //     `- Their ATA:  ${splTokenAta2.toBase58()}\n` +
-        //     `- My PDA:     ${accountAddress}\n` +
-        //     `- My ATA:     ${splTokenAta.toBase58()}`
-        // );
-        
-        const accountInfo = await connection.getAccountInfo(splTokenAta);
-        
-        if ( ! accountInfo ) {
-            console.log(`ATA for ${accountAddress} (${splTokenAta.toBase58()}) not found!`);
-            return;
-        }
-        const { mint, owner, amount } = parseSplTokenAccountData(accountInfo.data);
-        
-        // Now fetch mint info to get decimals
-        // const mintInfo = await connection.getAccountInfo(mint);
-        // if (!mintInfo) {
-        //     throw new Error("Mint account not found");
-        // }
-        // const { decimals } = parseSplTokenMintData(mintInfo.data);
-        
-        const decimals = SUPPORTED_TOKENS[symbol].decimals;
-        
-        // Human friendly balance
-        const displayAmount = Number(amount) / Math.pow(10, decimals);
-        const balance       = displayAmount.toString();
-        const mintAddr      = mint.toBase58();
-        
-        $(`#tokensList .tokenElement[data-symbol="${symbol}"]`).attr("data-decimals", decimals);
-        $(`#tokensList .tokenElement[data-symbol="${symbol}"] input[name="selectedToken"]`)
-            .val(mintAddr)
-            .attr("data-ata", splTokenAta.toBase58());
-        $(`#tokensList .tokenElement[data-symbol="${symbol}"] .balance`).text(balance);
-        
-        console.log(`
-            Mint: ${mint.toBase58()}
-            Owner: ${owner.toBase58()} / ${splTokenAta}
-            Raw Amount: ${amount.toString()}
-            Amount: ${balance}
-        `.replace(/ {12}/g, ''));
-    }
 </script>
 
 <script>
@@ -226,7 +196,9 @@
             const addr = wallet.toBase58();
             console.log("Connected to wallet:", addr);
             document.getElementById("dest").value = addr;
-            // $("#disconnectWallet").show();
+            $("#connectWallet").hide();
+            $("#disconnectWallet").show();
+            $("#witdhraw_button").show();
         } else {
             alert("Phantom wallet not found");
         }
@@ -247,12 +219,38 @@
     
     async function withdraw()
     {
+        let $controls = $("#piggybank_withdrawal_widget").find('input:not(#dest), button');
+        
+        if( ! wallet )
+        {
+            alert("Please connect the wallet.");
+            return;
+        }
+        
         // Get selected token mint and corresponding NFT mint
         const $selectedItem      = $('input[name="selectedToken"]:checked');
         const symbol             = $selectedItem.closest('label').attr('data-symbol');
-        const selectedTokenMint  = $selectedItem.val();
-        const selectedTokenPDA   = $selectedItem.attr('data-pda');
-        const selectedTokenATA   = $selectedItem.attr('data-ata');
+        const selectedTokenMint  = $selectedItem.closest('label').attr('data-mint');
+        const selectedTokenPDA   = vaultPDA;
+        const selectedTokenATA   = $selectedItem.val();
+        
+        // NFT mint input
+        const NFT_MINT_ADDRESS = document.getElementById("nft_address").value.trim();
+        if (NFT_MINT_ADDRESS === "") {
+            alert("Please paste the NFT mint address");
+            return;
+        }
+        
+        // Other inits
+        const walletPubkey = wallet;
+        const nftMint      = new solanaWeb3.PublicKey(NFT_MINT_ADDRESS);
+        const SPLtokenMint = new solanaWeb3.PublicKey(selectedTokenMint);
+        
+        if( ! await isHolderOf(nftMint) )
+        {
+            alert("You don't own this NFT.")
+            return;
+        }
         
         const amount = parseFloat(document.getElementById("amount").value);
         if (isNaN(amount) || amount <= 0) {
@@ -262,17 +260,6 @@
         
         const decimals = parseInt($selectedItem.closest('label').attr('data-decimals'));
         const bigamount = BigInt(Math.round(amount * (10 ** decimals)));
-        
-        // NFT mint input
-        const NFT_MINT_ADDRESS = document.getElementById("nft_address").value.trim();
-        if (NFT_MINT_ADDRESS === "") {
-            alert("Please paste the NFT mint address");
-            return;
-        }
-        
-        const walletPubkey = wallet;
-        const nftMint = new solanaWeb3.PublicKey(NFT_MINT_ADDRESS);
-        const SPLtokenMint = new solanaWeb3.PublicKey(selectedTokenMint);
         
         // 1. User's NFT token account (ATA for nftMint)
         const userNftTokenAccount = await getAssociatedTokenAddress(nftMint, walletPubkey);
@@ -289,39 +276,43 @@
         // 3b. Vault ATA account
         const vaultSplTokenAccount = new solanaWeb3.PublicKey(selectedTokenATA);
         
+        const solanaWeb3_SystemProgram = solanaWeb3.SystemProgram.programId;
+        
         // 4. The rest: Programs and sysvars
         let keys = [
-            { pubkey: walletPubkey,                  isSigner: true,  isWritable: true  },  // signer
-            { pubkey: nftMint,                       isSigner: false, isWritable: false },  // nft_mint
-            { pubkey: SPLtokenMint,                  isSigner: false, isWritable: false },  // token_mint
-            { pubkey: userNftTokenAccount,           isSigner: false, isWritable: true  },  // nft_token_account (where user holds the NFT)
-            { pubkey: vaultAccount,                  isSigner: false, isWritable: false },  // vault (the PDA, SystemAccount)
-            { pubkey: vaultSplTokenAccount,          isSigner: false, isWritable: true  },  // vault_token_ata (ATA of SPL token, authority = vault PDA)
-            { pubkey: userSplTokenAccount,           isSigner: false, isWritable: true  },  // user_token_ata (ATA of SPL token, authority = signer)
-            { pubkey: TOKEN_PROGRAM_ID,              isSigner: false, isWritable: false },  // token_program
-            { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,   isSigner: false, isWritable: false },  // associated_token_program
-            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }, // system_program
+            { pubkey: walletPubkey,                  isSigner: true,  isWritable: true  }, // signer
+            { pubkey: nftMint,                       isSigner: false, isWritable: false }, // nft_mint
+            { pubkey: SPLtokenMint,                  isSigner: false, isWritable: false }, // token_mint
+            { pubkey: userNftTokenAccount,           isSigner: false, isWritable: true  }, // nft_token_account (where user holds the NFT)
+            { pubkey: vaultAccount,                  isSigner: false, isWritable: false }, // vault (the PDA, SystemAccount)
+            { pubkey: vaultSplTokenAccount,          isSigner: false, isWritable: true  }, // vault_token_ata (ATA of SPL token, authority = vault PDA)
+            { pubkey: userSplTokenAccount,           isSigner: false, isWritable: true  }, // user_token_ata (ATA of SPL token, authority = signer)
+            { pubkey: TOKEN_PROGRAM_ID,              isSigner: false, isWritable: false }, // token_program
+            { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,   isSigner: false, isWritable: false }, // associated_token_program
+            { pubkey: solanaWeb3_SystemProgram,      isSigner: false, isWritable: false }, // system_program
         ];
         
-        // console.log(`
-        //     Key 0 (Wallet Pubkey):              ${keys[0].pubkey.toString()}
-        //     Key 1 (NFT mint):                   ${keys[1].pubkey.toString()}
-        //     Key 2 (SPL token mint):             ${keys[2].pubkey.toString()}
-        //     Key 3 (User NFT token account):     ${keys[3].pubkey.toString()}
-        //     Key 4 (Vault account):              ${keys[4].pubkey.toString()}
-        //     Key 5 (Vault SPL token account):    ${keys[5].pubkey.toString()}
-        //     Key 6 (User SPL token account):     ${keys[6].pubkey.toString()}
-        //     Key 7 (Solana token program):       ${keys[7].pubkey.toString()}
-        //     Key 8 (Solana assoc token program): ${keys[8].pubkey.toString()}
-        //     Key 9 (Solana SYSTEM PROGRAM):      ${keys[9].pubkey.toString()}
-        // `.replace(/ {12}/g, ''));
+        console.log(`
+            Key 0 (Wallet Pubkey):              ${keys[0].pubkey.toString()}
+            Key 1 (NFT mint):                   ${keys[1].pubkey.toString()}
+            Key 2 (SPL token mint):             ${keys[2].pubkey.toString()}
+            Key 3 (User NFT token account):     ${keys[3].pubkey.toString()}
+            Key 4 (Vault account):              ${keys[4].pubkey.toString()}
+            Key 5 (Vault SPL token account):    ${keys[5].pubkey.toString()}
+            Key 6 (User SPL token account):     ${keys[6].pubkey.toString()}
+            Key 7 (Solana token program):       ${keys[7].pubkey.toString()}
+            Key 8 (Solana assoc token program): ${keys[8].pubkey.toString()}
+            Key 9 (Solana SYSTEM PROGRAM):      ${keys[9].pubkey.toString()}
+        `.replace(/ {12}/g, ''));
+        
+        $controls.prop('disabled', true);
         
         // Instruction data
         const data = buildWithdrawData(bigamount);
         
         const ix = new solanaWeb3.TransactionInstruction({
             keys: keys,
-            programId: new solanaWeb3.PublicKey(VAULT_PROGRAM_ID),
+            programId: new solanaWeb3.PublicKey(PIGGYBANK_PROGRAM_ID),
             data: data
         });
         
@@ -331,11 +322,41 @@
         
         // Simulate (optional)
         const simulation = await connection.simulateTransaction(tx);
+        let has_errors = false;
         console.log("Simulation result:", simulation);
-        for (let line of simulation.value.logs) console.error(line);
+        for (let line of simulation.value.logs)
+        {
+            if( line.match(/error/i) )
+            {
+                console.error(line);
+                has_errors = true;
+            }
+            else
+            {
+                console.log(line);
+            }
+        }
         
-        // Uncomment to actually send:
-        const signedTx = await window.solana.signTransaction(tx);
+        if( has_errors ) {
+            alert("The simulation has errors. Please check the JS console for debug info.");
+            $controls.prop('disabled', false);
+            return;
+        }
+        
+        // Segment: send!
+        
+        let signedTx;
+        try
+        {
+            signedTx = await window.solana.signTransaction(tx);
+        }
+        catch( e )
+        {
+            alert( e.toString() );
+            $controls.prop('disabled', false);
+            return;
+        }
+        
         let sig;
         try {
             console.log("Transmitting transaction...");
@@ -346,33 +367,20 @@
                 for (let line of e.logs) console.error(line);
             }
             console.error("SendTransactionError:", e);
+            $controls.prop('disabled', false);
             return;
         }
-        
+
         console.log("Confirming...");
         await connection.confirmTransaction(sig);
-        alert(`Transaction sent: ${sig}`);
-    }
-    
-    async function verifyMplCoreOwnership(wallet, mintAddress)
-    {
-        const response = await fetch(HELIUS_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                                     jsonrpc: "2.0",
-                                     id: "1",
-                                     method: "getAsset",
-                                     params: { id: mintAddress }
-                                 })
-        });
-        const result = await response.json();
-        if (result.result && 
-            result.result.ownership && 
-            result.result.ownership.owner === wallet.toBase58()) {
-            return true;
-        }
-        return false;
+        console.log(`Transaction sent: ${sig}`);
+        
+        let url = explorerLink.replace("<endpoint>", "tx").replace("<data>", sig);
+        let shortened_sig = sig.substring(0, 4) + '...' + sig.substring(sig.length - 4);
+        $('#withdrawalResult').html(`
+            <b>Transaction sent!</b> Signature:
+            <a href="${url}" target="_blank">${shortened_sig}</a>
+        `);
     }
     
     function buildWithdrawData(amount)
@@ -406,31 +414,22 @@
         )[0];
     }
     
-    function getVaultPda(nftMint, tokenMint) {
-        return PublicKey.findProgramAddressSync(
-            [
-                new TextEncoder().encode(VAULT_PROGRAM_KEY),
-                nftMint.toBuffer(),
-                tokenMint.toBuffer(),
-            ],
-            new PublicKey(VAULT_PROGRAM_ID)
-        )[0];
-    }
-    
-    async function findNftTokenAccount(wallet, nftMint) {
+    async function isHolderOf(nftMint) {
         const accounts = await connection.getTokenAccountsByOwner(wallet, {
             mint: nftMint
         });
+        
         // If user owns multiple, pick the one with amount == 1
         for (let acc of accounts.value) {
             const amount = Number(
                 new DataView(acc.account.data.buffer, 64, 8).getBigUint64(0, true)
             );
             if (amount === 1) {
-                return new PublicKey(acc.pubkey);
+                return true; // new PublicKey(acc.pubkey);
             }
         }
-        throw new Error("NFT token account not found or user does not own this NFT.");
+        return false;
+        // throw new Error("NFT token account not found or user does not own this NFT.");
     }
 </script>
 

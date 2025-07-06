@@ -12,6 +12,7 @@
     
     const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
     let wallet = null; // Will hold the Phantom wallet public key
+    let wallet_provider = null;
     const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
     
     const PIGGYBANK_PROGRAM_ID = "2NBAyDg3dpW6AkJLYasP6X2oosRfBRXk4UKeoEZugn56"; // Update this
@@ -39,13 +40,13 @@
     <p>
         NFT address:
         <input type="text" id="nft_address" style="width: 360px"
-               value="7GvHBvXHFvFrmLQvmuAB2Kkvffoq5SZopR7zo3grmqQk">
+               value="775XAs5qn1hPTf8H6idqea9sRqkzu6pmqeQ2WBc3YaQJ">
     </p>
     <div id="step1">
         <p>
             NFT metadata URI:
             <input type="text" id="metadata_uri" style="width: 360px"
-                   value="https://gateway.irys.xyz/CxSAAyNQruMrMEAvbxpdQwUmtxNxG7dgHWgo1buxG5v8">
+                   value="https://gateway.irys.xyz/91f8fTfim4DZzui8ReqqG4rYj6a3BxzD17V71euQ8rT7">
         </p>
         <button onclick="getNFTmetadata()">Fetch info</button>
     </div>
@@ -188,9 +189,22 @@
     // Wallet ops //
     //------------//
     
+    function getSolanaProvider()
+    {
+        if ("solana" in window) {
+            const provider = window.solana;
+            if (provider.isPhantom || provider.isBackpack || provider.isSolflare || provider.isLedger || provider.isWallet) {
+                return provider;
+            }
+        }
+        return null;
+    }
+    
     async function connectWallet()
     {
-        if (window.solana && window.solana.isPhantom) {
+        wallet_provider = getSolanaProvider();
+        
+        if (window.solana && wallet_provider) {
             const response = await window.solana.connect();
             wallet = response.publicKey;
             const addr = wallet.toBase58();
@@ -200,19 +214,19 @@
             $("#disconnectWallet").show();
             $("#witdhraw_button").show();
         } else {
-            alert("Phantom wallet not found");
+            alert("Wallet not found");
         }
     }
     
     async function disconnectWallet()
     {
-        if (window.solana && window.solana.isPhantom) {
+        if (window.solana && wallet_provider) {
             try {
                 await window.solana.disconnect();
                 // Optional: Reset UI, clear fields, show connect button again, etc.
                 location.reload();
             } catch (e) {
-                alert("Failed to disconnect Phantom: " + e.message);
+                alert("Failed to disconnect wallet: " + e.message);
             }
         }
     }
@@ -321,9 +335,10 @@
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         
         // Simulate (optional)
+        console.log("%cRunning simulation", "color: teal");
         const simulation = await connection.simulateTransaction(tx);
         let has_errors = false;
-        console.log("Simulation result:", simulation);
+        console.log("%cSimulation results:", "color: teal");
         for (let line of simulation.value.logs)
         {
             if( line.match(/error/i) )
@@ -333,7 +348,7 @@
             }
             else
             {
-                console.log(line);
+                console.log("%c%s", "color: teal", line);
             }
         }
         
@@ -345,6 +360,7 @@
         
         // Segment: send!
         
+        console.log("%cExecuting transaction", "color: skyblue");
         let signedTx;
         try
         {
@@ -359,7 +375,7 @@
         
         let sig;
         try {
-            console.log("Transmitting transaction...");
+            console.log("%cTransmitting transaction...", "color: goldenrod");
             sig = await connection.sendRawTransaction(signedTx.serialize());
         } catch (e) {
             if (e.logs) {
@@ -370,15 +386,15 @@
             $controls.prop('disabled', false);
             return;
         }
-
-        console.log("Confirming...");
+        
+        console.log("%cConfirming...", "color: magenta");
         await connection.confirmTransaction(sig);
-        console.log(`Transaction sent: ${sig}`);
+        console.log(`%cTransaction sent: ${sig}`, "color: green");
         
         let url = explorerLink.replace("<endpoint>", "tx").replace("<data>", sig);
         let shortened_sig = sig.substring(0, 4) + '...' + sig.substring(sig.length - 4);
         $('#withdrawalResult').html(`
-            <b>Transaction sent!</b> Signature:
+            <b style="color: green">Transaction sent!</b> Signature:
             <a href="${url}" target="_blank">${shortened_sig}</a>
         `);
     }

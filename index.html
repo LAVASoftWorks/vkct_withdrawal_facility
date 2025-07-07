@@ -3,7 +3,13 @@
 <head>
     <title>Piggy Bank Withdrawal</title>
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+            integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+          integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script>
         //---------------------//
         // INITIAL DEFINITIONS //
@@ -49,9 +55,14 @@
             font-family: 'lucida console', consolas, 'courier new', courier, monospace;
         }
         
-        .alignright { text-align: right; }
+        .alignright {
+            text-align: right;
+        }
         
-        #step1, #step2 { margin-top: 20px; }
+        #step1, #step2 {
+            margin-top: 20px;
+            border-radius: 10px;
+        }
         
         #nfts_list {
             display: flex;
@@ -133,7 +144,7 @@
             display: grid;
             width: 100%;
             gap: 10px;
-            grid-template-columns: auto 1fr;
+            grid-template-columns: auto 1fr auto;
             margin-top: 10px;
         }
         
@@ -160,53 +171,87 @@
             border: 1px solid green;
             font-size: large;
         }
+        
+        #progress_overlay {
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+        }
+
+        #progress_overlay.visible {
+            display: block;
+        }
+        
+        #progress_message {
+            display: inline-block;
+            background: lightgoldenrodyellow;
+            border: 2px solid silver;
+            box-shadow: 5px 5px 10px black;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            padding: 5px;
+            border-radius: 5px;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
 
 <div id="piggybank_withdrawal_widget">
     <h1>
+        <i class="fa fa-wallet"></i>
         Withdraw piggy bank funds
     </h1>
     
     <p>
         Your wallet:
         <input type="text" id="dest" disabled value="" style="width: 360px">
-        <button id="connectWallet"    onclick="connectWallet()">✔️ Connect wallet</button>
-        <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none">⛔ Disconnect wallet</button>
+        <button id="connectWallet"    onclick="connectWallet()"><i class="fa fa-sign-in"></i> Connect wallet</button>
+        <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none"><i class="fa fa-sign-out"></i> Disconnect wallet</button>
     </p>
     
     <div id="nfts_list">
         <p>
-            ℹ️ Please connect your wallet to get the NFTs you own.
+            <i class="fa fa-info-circle"></i>
+            Please connect your wallet to get the NFTs you own.
         </p>
     </div>
     
     <fieldset id="step1" style="display: none">
-        <legend>✨ NFT info</legend>
+        <legend><i class="fa fa-leaf"></i> NFT info</legend>
         <div id="nft_info">
             <span class="caption">NFT address:</span>
-            <input type="text" readonly id="nft_address" 
-                   value="">
-
+            <input type="text" readonly id="nft_address" value="">
+            <a id="link_to_nft" href="" target="_blank"><i class="fa fa-external-link fa-fw"></i></a>
             <span class="caption">NFT metadata URI:</span>
-            <input type="text" readonly id="metadata_uri" 
-                   value="">
+            <input type="text" readonly id="metadata_uri" value="">
+            <a id="link_to_nft_metadata" href="" target="_blank"><i class="fa fa-external-link fa-fw"></i></a>
         </div>
     </fieldset>
     
     <fieldset id="step2" style="display: none">
-        <legend>🐖 Piggy Bank info</legend>
+        <legend><i class="fa fa-piggy-bank"></i> Piggy Bank info</legend>
         <div id="tokensList"></div>
         <p>
             Amount:
             <input id="amount" type="number" step="any" value="0" style="text-align: center; width: 100px;">
         </p>
         <p id="withdrawalResult" style="margin-bottom: 0"></p>
-        <template id="withdrawalResult_src">
-            <button id="witdhraw_button" onclick="withdraw()">💸 Withdraw</button>
-        </template>
     </fieldset>
+</div>
+
+<template id="withdrawalResult_src">
+    <button id="witdhraw_button" onclick="withdraw()"><i class="fa fa-upload"></i> Withdraw</button>
+</template>
+
+<div id="progress_overlay">
+    <div id="progress_message"></div>
 </div>
 
 <script>
@@ -221,15 +266,40 @@
         $('#piggybank_withdrawal_widget').toggleClass('blocked', onoff === 'off');
     }
     
+    function showProgress(message = '')
+    {
+        let $overlay = $('#progress_overlay');
+        let $target  = $('#progress_message');
+        let $body    = $('body');
+        
+        if( message === '' )
+        {
+            $body.css('overflow', 'initial');
+            $overlay.toggleClass('visible', false);
+            return;
+        }
+        
+        $target.html(`<i class="fa fa-spinner fa-pulse"></i> ${message}`);
+        $overlay.toggleClass('visible', true);
+        $overlay.show();
+    }
+    
+    function hideProgress()
+    {
+        showProgress();
+    }
+    
     async function getNFTmetadata()
     {
         toggleUI('off');
+        showProgress("Fetching NFT metadata...");
         let mint = $('#nft_address').val().trim();
         let uri  = $('#metadata_uri').val().trim();
         if( uri === '' )
         {
             alert('Please paste the NFT metadata URI');
             toggleUI('on');
+            hideProgress();
             return;
         }
         
@@ -258,6 +328,8 @@
                     .toggleClass('selected', false)
                     .toggleClass('enabled', false);
                 $('#step1, #step2').hide();
+                toggleUI('on');
+                hideProgress();
                 return;
             }
             
@@ -265,12 +337,15 @@
         })
         .fail(function(error) {
             alert(`Error: ${error.status}: ${error.statusText}`);
+            toggleUI('on');
+            hideProgress();
         });
     }
     
     async function populateTokenDropdown()
     {
         toggleUI('off');
+        showProgress("Fetching NFT piggy bank balances...");
         const $container = $("#tokensList");
         $container.html('');
         
@@ -316,6 +391,7 @@
         {
             $container.append(`<p class="error">No piggy bank info found.</p>`);
             toggleUI('on');
+            hideProgress();
             return
         }
         
@@ -325,6 +401,7 @@
         $('#step2').show();
         $('#nft_address').prop('readonly', true);
         toggleUI('on');
+        hideProgress();
     }
     
     function parseSplTokenAccountData(data)
@@ -344,12 +421,17 @@
     {
         let $items = $('#nfts_list .nft');
         let $this = $(item);
+        let mint  = $this.attr('data-mint');
+        let uri   = $this.attr('data-uri');
         
         $items.toggleClass('selected', false);
         $this.toggleClass('selected', true);
         
-        $('#nft_address').val($this.attr('data-mint'));
-        $('#metadata_uri').val($this.attr('data-uri'));
+        $('#nft_address').val(mint);
+        $('#link_to_nft').attr('href', explorerLink.replace('<endpoint>', 'address').replace('<data>', mint))
+        $('#metadata_uri').val(uri);
+        $('#link_to_nft_metadata').attr('href', uri);
+        
         $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
         getNFTmetadata();
     }
@@ -393,6 +475,7 @@
     async function populateOwnedTokens()
     {
         toggleUI('off');
+        showProgress("Fetching owned NFTs...");
         const accounts = await connection.getParsedTokenAccountsByOwner(wallet, {
             programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID)
         });
@@ -401,6 +484,7 @@
         {
             alert("No tokens held by this wallet.");
             toggleUI('on');
+            hideProgress();
             return;
         }
         
@@ -418,7 +502,6 @@
                 };
                 
                 console.log('Mint:', token.mint);
-                // const metadataPDA = await getTokenMetadataAddress(new solanaWeb3.PublicKey(token.mint));
                 const [metadataPDA] = solanaWeb3.PublicKey.findProgramAddressSync(
                     [
                         new TextEncoder().encode('metadata'),
@@ -444,10 +527,11 @@
         {
             $container.html(`
                 <p style="color: maroon">
-                    ⚠️ You don't have any NFTs in your wallet.
+                    <i class="fa fa-warning"></i> You don't have any NFTs in your wallet.
                 </p>
             `);
             toggleUI('on');
+            hideProgress();
             return;
         }
         
@@ -477,6 +561,7 @@
             })
         });
         toggleUI('on');
+        hideProgress();
     }
     
     async function disconnectWallet()
@@ -524,13 +609,16 @@
         const nftMint      = new solanaWeb3.PublicKey(NFT_MINT_ADDRESS);
         const SPLtokenMint = new solanaWeb3.PublicKey(selectedTokenMint);
         
+        showProgress("Checking NFT ownership...");
         if( ! await isHolderOf(nftMint) )
         {
             alert("You don't own this NFT.")
             toggleUI('on');
+            hideProgress();
             return;
         }
         
+        showProgress("Checking amount...");
         const amount = parseFloat(document.getElementById("amount").value);
         if (isNaN(amount) || amount <= 0) {
             alert(`Please enter the amount of ${symbol}`);
@@ -541,6 +629,7 @@
         const decimals = parseInt($selectedItem.closest('label').attr('data-decimals'));
         const bigamount = BigInt(Math.round(amount * (10 ** decimals)));
         
+        showProgress("Building account requirements...");
         // 1. User's NFT token account (ATA for nftMint)
         const userNftTokenAccount = await getAssociatedTokenAddress(nftMint, walletPubkey);
         // OR: Use the function above to make sure you get the actual token account with 1 token
@@ -600,7 +689,8 @@
         tx.feePayer = wallet;
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         
-        // Simulate (optional)
+        // Step: simluation
+        showProgress("Running smart contract call simulation...");
         console.log("%cRunning simulation", "color: teal");
         const simulation = await connection.simulateTransaction(tx);
         let has_errors = false;
@@ -622,11 +712,12 @@
             alert("The simulation has errors. Please check the JS console for debug info.");
             $controls.prop('disabled', false);
             toggleUI('on');
+            hideProgress();
             return;
         }
         
         // Segment: send!
-        
+        showProgress("Executing smart contract call...");
         console.log("%cExecuting transaction", "color: skyblue");
         let signedTx;
         try
@@ -638,6 +729,7 @@
             alert( e.toString() );
             $controls.prop('disabled', false);
             toggleUI('on');
+            hideProgress();
             return;
         }
         
@@ -653,24 +745,28 @@
             console.error("SendTransactionError:", e);
             $controls.prop('disabled', false);
             toggleUI('on');
+            hideProgress();
             return;
         }
         
+        showProgress("Confirming the transaction...");
         console.log("%cConfirming...", "color: magenta");
         await connection.confirmTransaction(sig);
         console.log(`%cTransaction sent: ${sig}`, "color: green");
         
         toggleUI('on');
+        hideProgress();
         let url = explorerLink.replace("<endpoint>", "tx").replace("<data>", sig);
         let shortened_sig = sig.substring(0, 8) + '...' + sig.substring(sig.length - 8);
         let $target = $(('#withdrawalResult'));
         $target
             .toggleClass('done', true)
             .html(`
+                <i class="fa fa-check-circle fa-lg"></i>
                 <b style="color: green">Transaction sent!</b> Signature:
                 <a href="${url}" target="_blank">${shortened_sig}</a>
                 <br><br>
-                <button onclick="resetUI()">🔃 Reset</button>
+                <button onclick="resetUI()"><i class="fa fa-refresh"></i> Reset</button>
             `);
     }
     
@@ -684,6 +780,7 @@
         let item = $(`#nfts_list .nft[data-mint="${mint}"]`)[0];
         setSelectedToken(item);
         toggleUI('on');
+        hideProgress();
     }
     
     function buildWithdrawData(amount)

@@ -297,6 +297,7 @@
             // Human friendly balance
             const displayAmount = Number(amount) / Math.pow(10, decimals);
             const balance       = displayAmount.toString();
+            const explorerUrl   = explorerLink.replace('<endpoint>', 'address').replace('<data>', mintaddr);
             
             $container.append(`
                 <label class="tokenElement" data-symbol="${symbol}" 
@@ -304,7 +305,7 @@
                        data-decimals="${decimals}">
                     <input type="radio" name="selectedToken" value="${ata}">
                     <span class="item_symbol">${symbol}</span>
-                    <span class="fixed_font">[${short_addr}]</span>
+                    <span class="fixed_font"><a href="${explorerUrl}" target="_blank">${short_addr}</a></span>
                     <span class="item_caption">Balance:</span>
                     <span class="balance fixed_font alignright">${balance}</span>
                 </label>

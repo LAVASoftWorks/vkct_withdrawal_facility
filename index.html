@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Piggy Bank Withdrawal</title>
+    <title>Piggy Bank Withdrawal Facility</title>
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
             integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
@@ -55,8 +55,26 @@
             font-family: 'lucida console', consolas, 'courier new', courier, monospace;
         }
         
+        .aligncenter {
+            text-align: center;
+        }
+        
         .alignright {
             text-align: right;
+        }
+        
+        .frame {
+            display: inline-block;
+            background: lightgoldenrodyellow;
+            border: 1px solid silver;
+            color: black;
+            padding: 2px 4px;
+        }
+        
+        .ellipsified {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         #step1, #step2 {
@@ -199,6 +217,22 @@
             border-radius: 5px;
             transform: translate(-50%, -50%);
         }
+        
+        #initial_warning {
+            background: #fffc9e;
+            border: 1px solid pink;
+            border-radius: 20px;
+            padding: 10px;
+            margin: 1em 0;
+        }
+        
+        #initial_warning *:first-child {
+            margin-top: 0;
+        }
+        
+        #initial_warning *:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -206,8 +240,75 @@
 <div id="piggybank_withdrawal_widget">
     <h1>
         <i class="fa fa-wallet"></i>
-        Withdraw piggy bank funds
+        Piggy Bank Withdrawal Facility v0.0.7
     </h1>
+    
+    <div id="initial_warning">
+        <p>
+            This page is a fully descentralized webapp that interacts with the
+            Phantom wallet to allow fungible token withdrawals owned by NFTs
+            made with the VolkaChain Tokenizer Framework.
+        </p>
+        <p>
+            It won't run any transaction other than calling the smart contract
+            that transfers the tokens from the NFT you own to your wallet.
+        </p>
+        <p>
+            <i class="fa fa-warning"></i> <b>Important:</b>
+            This file should be hosted at <b>https://irys.xyz</b>.
+            If the URL on your browser address bar doesn't match, then <b>you're at the wrong location.</b>
+        </p>
+        <p>
+            <b style="color: red">Never open this file directly.</b>
+            Always go to the NFT and click on the "Website" or "External link" attribute.
+            That link points to the latest version of this file as stored on the Solana blockchain.
+            <a href="https://explorer.solana.com/address/2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn?cluster=devnet" target="_top">Go to the NFT profile now <i class="fa fa-external-link"></i></a><br>
+            <b>Bookmark the NFT page, not this one!</b>
+        </p>
+        <p>
+            <strong><i class="fa fa-info-circle"></i> Disclaimer:</strong>
+            This interface is provided as-is, without warranties or obligations of any kind.
+            Always double-check transaction details in your wallet.
+        </p>
+        <p>
+            If you want to compare this page against the published one in the GitHub repo,
+            You can do it by following the next instructions:
+        </p>
+        <ol>
+            <li>
+                Hit Ctrl-U (Windows) or Command-Option-U (Mac) to view the source code of this page.
+                It will open on a new tab.
+            </li>
+            <li>
+                Open the raw content of the latest published version of this page at GitHub on a new tab:
+                <a href="https://github.com/path/to/repo">github.com/path/to/repo</a>
+            </li>
+            <li>
+                Open Diffchecker on another tab:
+                <a href="https://www.diffchecker.com/" target="_blank">www.diffchecker.com</a>
+            </li>
+            <li>
+                Copy the raw content of the page at GitHub and paste it on the <u>Original text</u> area of DiffChecker.
+            </li>
+            <li>
+                Copy the source code of this page and paste it at the <u>Changed text</u> area of DiffChecker.
+            </li>
+            <li>
+                Make sure that both areas have the same amount of code lines!
+                Sometimes, the browser adds blank lines at the top and/or the bottom of the source code.<br>
+                If you spot them, remove them.
+            </li>
+            <li>
+                Hit the "Find difference" button. You should see no differences.
+                If there are any, then <b>don't trust this page</b>.
+            </li>
+        </ol>
+        <p>
+            <button onclick="$('#initial_warning').hide();">
+                <i class="fa fa-times"></i> Dismiss
+            </button>
+        </p>
+    </div>
     
     <p>
         Your wallet:
@@ -254,6 +355,20 @@
     <div id="progress_message"></div>
 </div>
 
+<script>
+    $(document).ready(function() {
+        if( window.location.href !== window.top.location.href )
+        {
+            $('#piggybank_withdrawal_widget').html(`
+                <div id="initial_warning">
+                    <b><i class="fa fa-warning"></i> Location mismatch</b><br><br>
+                    This script is being opened through an iframe.<br><br>
+                    All functions have been disabled.
+                </div>
+            `);
+        }
+    });
+</script>
 <script>
     //--------------------//
     // User interface ops //
@@ -408,7 +523,7 @@
     {
         const mint = new solanaWeb3.PublicKey(data.slice(0, 32));
         const owner = new solanaWeb3.PublicKey(data.slice(32, 64));
-        // Amount: bytes 64–71, little-endian
+        // Amount: bytes 64-71, little-endian
         // Use DataView to read 8 bytes as little-endian unsigned integer (BigUint64)
         const amountBuffer = data.slice(64, 72);
         // Create a DataView; make sure it's an ArrayBuffer
@@ -662,17 +777,17 @@
         ];
         
         console.log(`
-            Key 0 (Wallet Pubkey):              ${keys[0].pubkey.toString()}
-            Key 1 (NFT mint):                   ${keys[1].pubkey.toString()}
-            Key 2 (SPL token mint):             ${keys[2].pubkey.toString()}
+            Key 0 (Wallet Pubkey):              ${keys[0].pubkey.toString()}
+            Key 1 (NFT mint):                   ${keys[1].pubkey.toString()}
+            Key 2 (SPL token mint):             ${keys[2].pubkey.toString()}
             Key 3 (User NFT token account):     ${keys[3].pubkey.toString()}
-            Key 4 (Vault account):              ${keys[4].pubkey.toString()}
+            Key 4 (Vault account):              ${keys[4].pubkey.toString()}
             Key 5 (Vault SPL token account):    ${keys[5].pubkey.toString()}
             Key 6 (User SPL token account):     ${keys[6].pubkey.toString()}
             Key 7 (Solana token program):       ${keys[7].pubkey.toString()}
             Key 8 (Solana assoc token program): ${keys[8].pubkey.toString()}
             Key 9 (Solana SYSTEM PROGRAM):      ${keys[9].pubkey.toString()}
-        `.replace(/ {12}/g, ''));
+        `.replace(/ {12}K/g, 'K'));
         
         $controls.prop('disabled', true);
         

@@ -4,69 +4,209 @@
     <title>Piggy Bank Withdrawal</title>
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        //---------------------//
+        // INITIAL DEFINITIONS //
+        //---------------------//
+        
+        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
+        let wallet = null; // Will hold the Phantom wallet public key
+        let wallet_provider = null;
+        let wallet_address  = null;
+        const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
+        
+        const PIGGYBANK_PROGRAM_ID = "2NBAyDg3dpW6AkJLYasP6X2oosRfBRXk4UKeoEZugn56"; // Update this
+        const IDL_DISCRIMINATOR    = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
+        const PIGGYBANK_TRAIT_KEY  = "Piggy bank address";                           
+        //    ^-- The trait type in the NFT metadata that has the PDA
+        
+        const SUPPORTED_TOKENS = {
+            "USDECE": {address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
+            "NODUCK": {address: "3ZWuguxLBKzmo1t9vCEPdebfjXKgRS4PRYgsq1pMq9YL", decimals: 9}
+        };
+        
+        // v--- Solana predefs ------------
+        const TOKEN_PROGRAM_ID            = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+        const METADATA_PROGRAM_ID         = new solanaWeb3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+        // ^-------------------------------
+    </script>
+    <style type="text/css">
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: arial, helvetica, sans-serif;
+        }
+        
+        #piggybank_withdrawal_widget.blocked {
+            cursor: wait;
+            pointer-events: none;
+            filter: grayscale(100%) blur(1px);
+        }
+        
+        .fixed_font {
+            font-family: 'lucida console', consolas, 'courier new', courier, monospace;
+        }
+        
+        .alignright { text-align: right; }
+        
+        #step1, #step2 { margin-top: 20px; }
+        
+        #nfts_list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .nft {
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: whitesmoke;
+            padding: 5px;
+            pointer-events: none;
+        }
+        
+        .nft .image {
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            width: 200px;
+            height: 200px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .nft .image img {
+            object-fit: contain;
+            object-position: center center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .nft .mint {
+            display: inline-block;
+            width: 100%;
+            border: 1px solid silver;
+            border-radius: 5px;
+            text-align: center;
+            padding: 2px;
+            margin-bottom: 5px;
+        }
+        
+        .nft .symbol {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            padding: 2px;
+        }
+        
+        .nft .name {
+            display: inline-block;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            padding: 2px;
+            text-overflow: ellipsis;
+        }
+        
+        .nft.enabled {
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        
+        .nft.enabled:hover {
+            border-color: blue;
+        }
+        
+        .nft.selected {
+            background-color: azure;
+            border-color:     blue;
+            color: blue;
+            pointer-events: none;
+        }
+        
+        #nft_info {
+            display: grid;
+            width: 100%;
+            gap: 10px;
+            grid-template-columns: auto 1fr;
+            margin-top: 10px;
+        }
+        
+        #tokensList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .tokenElement {
+            display: grid;
+            width: 100%;
+            grid-template-columns: auto 1fr 2fr auto 1fr;
+            gap: 10px;
+        }
+        
+        #withdrawalResult.done {
+            background-color: greenyellow;
+            border-radius: 10px;
+            color: green;
+            padding: 10px 5px;
+            text-align: center;
+            border: 1px solid green;
+            font-size: large;
+        }
+    </style>
 </head>
-<script>
-    //--------------------------------//
-    // INITIAL DEFINITIONS USED BELOW //
-    //--------------------------------//
-    
-    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
-    let wallet = null; // Will hold the Phantom wallet public key
-    let wallet_provider = null;
-    const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
-    
-    const PIGGYBANK_PROGRAM_ID = "2NBAyDg3dpW6AkJLYasP6X2oosRfBRXk4UKeoEZugn56"; // Update this
-    const IDL_DISCRIMINATOR    = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
-    const PIGGYBANK_TRAIT_KEY  = "Piggy bank address";                           
-    //    ^-- The trait type in the NFT metadata that has the PDA
-    
-    const SUPPORTED_TOKENS = {
-        "USDECE": {address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
-        "NODUCK": {address: "3ZWuguxLBKzmo1t9vCEPdebfjXKgRS4PRYgsq1pMq9YL", decimals: 9}
-    };
-    
-    // v--- Set by Solana -------------
-    const TOKEN_PROGRAM_ID            = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-    const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
-    // ^-------------------------------
-</script>
 <body>
 
-<h1>
-    Withdraw piggy bank funds
-</h1>
-
 <div id="piggybank_withdrawal_widget">
+    <h1>
+        Withdraw piggy bank funds
+    </h1>
+    
     <p>
-        NFT address:
-        <input type="text" id="nft_address" style="width: 360px"
-               value="775XAs5qn1hPTf8H6idqea9sRqkzu6pmqeQ2WBc3YaQJ">
+        Your wallet:
+        <input type="text" id="dest" disabled value="" style="width: 360px">
+        <button id="connectWallet"    onclick="connectWallet()">✔️ Connect wallet</button>
+        <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none">⛔ Disconnect wallet</button>
     </p>
-    <div id="step1">
+    
+    <div id="nfts_list">
         <p>
-            NFT metadata URI:
-            <input type="text" id="metadata_uri" style="width: 360px"
-                   value="https://gateway.irys.xyz/91f8fTfim4DZzui8ReqqG4rYj6a3BxzD17V71euQ8rT7">
+            ℹ️ Please connect your wallet to get the NFTs you own.
         </p>
-        <button onclick="getNFTmetadata()">Fetch info</button>
     </div>
     
-    <div id="step2" style="display: none">
+    <fieldset id="step1" style="display: none">
+        <legend>✨ NFT info</legend>
+        <div id="nft_info">
+            <span class="caption">NFT address:</span>
+            <input type="text" readonly id="nft_address" 
+                   value="">
+
+            <span class="caption">NFT metadata URI:</span>
+            <input type="text" readonly id="metadata_uri" 
+                   value="">
+        </div>
+    </fieldset>
+    
+    <fieldset id="step2" style="display: none">
+        <legend>🐖 Piggy Bank info</legend>
         <div id="tokensList"></div>
         <p>
-            Your wallet:
-            <input type="text" id="dest" disabled value="" style="width: 360px">
-            <button id="connectWallet"    onclick="connectWallet()">✔️ Connect wallet</button>
-            <button id="disconnectWallet" onclick="disconnectWallet()" style="display: none">⛔ Disconnect wallet</button>
-        </p>
-        <p>
             Amount:
-            <input id="amount" type="number" step="any" value="0">
+            <input id="amount" type="number" step="any" value="0" style="text-align: center; width: 100px;">
         </p>
-        <p id="withdrawalResult">
-            <button id="witdhraw_button" onclick="withdraw()" style="display: none">💸 Withdraw</button>
-        </p>
-    </div>
+        <p id="withdrawalResult" style="margin-bottom: 0"></p>
+        <template id="withdrawalResult_src">
+            <button id="witdhraw_button" onclick="withdraw()">💸 Withdraw</button>
+        </template>
+    </fieldset>
 </div>
 
 <script>
@@ -76,12 +216,20 @@
     
     let vaultPDA = null;
     
+    function toggleUI(onoff)
+    {
+        $('#piggybank_withdrawal_widget').toggleClass('blocked', onoff === 'off');
+    }
+    
     async function getNFTmetadata()
     {
-        let uri = $('#metadata_uri').val().trim();
+        toggleUI('off');
+        let mint = $('#nft_address').val().trim();
+        let uri  = $('#metadata_uri').val().trim();
         if( uri === '' )
         {
             alert('Please paste the NFT metadata URI');
+            toggleUI('on');
             return;
         }
         
@@ -105,7 +253,11 @@
             
             if( vaultPDA === null )
             {
-                alert("Coul'nt find the piggy bank address in the NFT metadata.");
+                alert("Could'nt find the piggy bank address in the NFT metadata.");
+                $(`#nfts_list .nft[data-mint="${mint}"]`)
+                    .toggleClass('selected', false)
+                    .toggleClass('enabled', false);
+                $('#step1, #step2').hide();
                 return;
             }
             
@@ -118,7 +270,9 @@
     
     async function populateTokenDropdown()
     {
+        toggleUI('off');
         const $container = $("#tokensList");
+        $container.html('');
         
         for(let symbol in SUPPORTED_TOKENS)
         {
@@ -129,7 +283,7 @@
             const addr     = ata.toBase58();
             const decimals = SUPPORTED_TOKENS[symbol].decimals;
             
-            let short_addr = addr.substring(0, 4) + '...' + addr.substring(addr.length - 4);
+            let short_addr = addr.substring(0, 8) + '...' + addr.substring(addr.length - 8);
             
             const accountInfo = await connection.getAccountInfo(ata);
             
@@ -145,29 +299,31 @@
             const balance       = displayAmount.toString();
             
             $container.append(`
-                <p class="pb_item">
-                    <label class="tokenElement" data-symbol="${symbol}" 
-                           data-mint="${mintaddr}"
-                           data-decimals="${decimals}">
-                        <input type="radio" name="selectedToken" value="${ata}">
-                        ${symbol} [${short_addr}] Balance: <span class="balance">${balance}</span>
-                    </label>
-                </p>
+                <label class="tokenElement" data-symbol="${symbol}" 
+                       data-mint="${mintaddr}"
+                       data-decimals="${decimals}">
+                    <input type="radio" name="selectedToken" value="${ata}">
+                    <span class="item_symbol">${symbol}</span>
+                    <span class="fixed_font">[${short_addr}]</span>
+                    <span class="item_caption">Balance:</span>
+                    <span class="balance fixed_font alignright">${balance}</span>
+                </label>
             `);
-            
         }
         
-        if( $container.find('.pb_item').length === 0 )
+        if( $container.find('.tokenElement').length === 0 )
         {
             $container.append(`<p class="error">No piggy bank info found.</p>`);
+            toggleUI('on');
             return
         }
         
         $container.find('input:first').prop('checked', true);
         
-        $('#step1').hide();
+        $('#step1').show();
         $('#step2').show();
         $('#nft_address').prop('readonly', true);
+        toggleUI('on');
     }
     
     function parseSplTokenAccountData(data)
@@ -181,6 +337,20 @@
         const amount = new DataView(amountBuffer.buffer, amountBuffer.byteOffset, 8)
         .getBigUint64(0, true); // true = little-endian
         return { mint, owner, amount };
+    }
+    
+    function setSelectedToken(item)
+    {
+        let $items = $('#nfts_list .nft');
+        let $this = $(item);
+        
+        $items.toggleClass('selected', false);
+        $this.toggleClass('selected', true);
+        
+        $('#nft_address').val($this.attr('data-mint'));
+        $('#metadata_uri').val($this.attr('data-uri'));
+        $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
+        getNFTmetadata();
     }
 </script>
 
@@ -208,14 +378,104 @@
             const response = await window.solana.connect();
             wallet = response.publicKey;
             const addr = wallet.toBase58();
+            wallet_address = addr;
             console.log("Connected to wallet:", addr);
             document.getElementById("dest").value = addr;
             $("#connectWallet").hide();
             $("#disconnectWallet").show();
-            $("#witdhraw_button").show();
+            await populateOwnedTokens();
         } else {
             alert("Wallet not found");
         }
+    }
+    
+    async function populateOwnedTokens()
+    {
+        toggleUI('off');
+        const accounts = await connection.getParsedTokenAccountsByOwner(wallet, {
+            programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID)
+        });
+        
+        if( ! accounts.value || accounts.value.length <= 0 )
+        {
+            alert("No tokens held by this wallet.");
+            toggleUI('on');
+            return;
+        }
+        
+        let tokens = [];
+        for( const { account } of accounts.value )
+        {
+            const info = account.data.parsed.info;
+            let token = {};
+            // console.log("Info:", info);
+            if( info.tokenAmount.decimals === 0 && info.tokenAmount.uiAmount === 1 )
+            {
+                token = {
+                    mint: info.mint,
+                    uri:  null,
+                };
+                
+                console.log('Mint:', token.mint);
+                // const metadataPDA = await getTokenMetadataAddress(new solanaWeb3.PublicKey(token.mint));
+                const [metadataPDA] = solanaWeb3.PublicKey.findProgramAddressSync(
+                    [
+                        new TextEncoder().encode('metadata'),
+                        METADATA_PROGRAM_ID.toBuffer(),
+                        new solanaWeb3.PublicKey(token.mint).toBuffer(),
+                    ],
+                    METADATA_PROGRAM_ID
+                );
+                console.log('MetadataPDA:', metadataPDA.toBase58());
+                
+                const accountInfo = await connection.getAccountInfo(metadataPDA);
+                // console.log('Account info:', accountInfo);
+                const uri = extractUriFromMetadataAccount(accountInfo.data);
+                console.log(`Metadata URI: ${uri}`);
+                
+                token.uri = uri;
+                tokens.push(token);
+            }
+        }
+        
+        let $container = $('#nfts_list');
+        if( tokens.length === 0 )
+        {
+            $container.html(`
+                <p style="color: maroon">
+                    ⚠️ You don't have any NFTs in your wallet.
+                </p>
+            `);
+            toggleUI('on');
+            return;
+        }
+        
+        $container.html('<div style="width: 100%">Select a token to check:</div>');
+        for(const token of tokens)
+        {
+            let short_mint = token.mint.substring(0, 8) + '...' + token.mint.substring(token.mint.length - 8);
+            $container.append(`
+                <span class="nft" data-mint="${token.mint}" data-uri="${token.uri}"
+                      onclick="setSelectedToken(this)">
+                    <span class="image"></span><br>
+                    <span class="mint fixed_font">${short_mint}</span><br>
+                    <span class="symbol fixed_font">Please wait...</span><br>
+                    <span class="name">Please wait...</span><br>
+                </span>
+            `);
+        }
+        
+        $container.find('.nft').each(function() {
+            const $this = $(this);
+            const url   = $this.attr('data-uri');
+            $.getJSON(url, function(data) {
+                $this.find('.symbol').text(data.symbol);
+                $this.find('.name').text(data.name);
+                $this.find('.image').html(`<img src="${data.image}">`);
+                $this.toggleClass('enabled', true);
+            })
+        });
+        toggleUI('on');
     }
     
     async function disconnectWallet()
@@ -233,11 +493,13 @@
     
     async function withdraw()
     {
+        toggleUI('off');
         let $controls = $("#piggybank_withdrawal_widget").find('input:not(#dest), button');
         
         if( ! wallet )
         {
             alert("Please connect the wallet.");
+            toggleUI('on');
             return;
         }
         
@@ -252,6 +514,7 @@
         const NFT_MINT_ADDRESS = document.getElementById("nft_address").value.trim();
         if (NFT_MINT_ADDRESS === "") {
             alert("Please paste the NFT mint address");
+            toggleUI('on');
             return;
         }
         
@@ -263,12 +526,14 @@
         if( ! await isHolderOf(nftMint) )
         {
             alert("You don't own this NFT.")
+            toggleUI('on');
             return;
         }
         
         const amount = parseFloat(document.getElementById("amount").value);
         if (isNaN(amount) || amount <= 0) {
             alert(`Please enter the amount of ${symbol}`);
+            toggleUI('on');
             return;
         }
         
@@ -355,6 +620,7 @@
         if( has_errors ) {
             alert("The simulation has errors. Please check the JS console for debug info.");
             $controls.prop('disabled', false);
+            toggleUI('on');
             return;
         }
         
@@ -370,6 +636,7 @@
         {
             alert( e.toString() );
             $controls.prop('disabled', false);
+            toggleUI('on');
             return;
         }
         
@@ -384,6 +651,7 @@
             }
             console.error("SendTransactionError:", e);
             $controls.prop('disabled', false);
+            toggleUI('on');
             return;
         }
         
@@ -391,12 +659,30 @@
         await connection.confirmTransaction(sig);
         console.log(`%cTransaction sent: ${sig}`, "color: green");
         
+        toggleUI('on');
         let url = explorerLink.replace("<endpoint>", "tx").replace("<data>", sig);
-        let shortened_sig = sig.substring(0, 4) + '...' + sig.substring(sig.length - 4);
-        $('#withdrawalResult').html(`
-            <b style="color: green">Transaction sent!</b> Signature:
-            <a href="${url}" target="_blank">${shortened_sig}</a>
-        `);
+        let shortened_sig = sig.substring(0, 8) + '...' + sig.substring(sig.length - 8);
+        let $target = $(('#withdrawalResult'));
+        $target
+            .toggleClass('done', true)
+            .html(`
+                <b style="color: green">Transaction sent!</b> Signature:
+                <a href="${url}" target="_blank">${shortened_sig}</a>
+                <br><br>
+                <button onclick="resetUI()">🔃 Reset</button>
+            `);
+    }
+    
+    function resetUI()
+    {
+        $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
+        let $controls = $("#piggybank_withdrawal_widget").find('input:not(#dest), button');
+        $controls.prop('disabled', false);
+        
+        let mint = $('#nft_address').val();
+        let item = $(`#nfts_list .nft[data-mint="${mint}"]`)[0];
+        setSelectedToken(item);
+        toggleUI('on');
     }
     
     function buildWithdrawData(amount)
@@ -446,6 +732,39 @@
         }
         return false;
         // throw new Error("NFT token account not found or user does not own this NFT.");
+    }
+</script>
+
+<script>
+    // ----------------------------------------------------- //
+    // Replacement for missing spl-token-metadata dependency //
+    // ----------------------------------------------------- //
+    
+    function readUInt32LE(bytes, offset)
+    {
+        return (
+            bytes[offset] +
+            (bytes[offset + 1] << 8) +
+            (bytes[offset + 2] << 16) +
+            (bytes[offset + 3] << 24)
+        );
+    }
+    
+    function extractUriFromMetadataAccount(data)
+    {
+        let offset = 1 + 32 + 32; // key + updateAuth + mint
+        // name
+        let nameLen = readUInt32LE(data, offset);
+        offset += 4 + nameLen;
+        // symbol
+        let symbolLen = readUInt32LE(data, offset);
+        offset += 4 + symbolLen;
+        // uri
+        let uriLen = readUInt32LE(data, offset);
+        offset += 4;
+        const uriBytes = data.slice(offset, offset + uriLen);
+        const uri = new TextDecoder().decode(uriBytes).replace(/\0/g, '');
+        return uri;
     }
 </script>
 

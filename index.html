@@ -27,8 +27,9 @@
         //    ^-- The trait type in the NFT metadata that has the PDA
         
         const SUPPORTED_TOKENS = {
-            "USDECE": {address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
-            "NODUCK": {address: "3ZWuguxLBKzmo1t9vCEPdebfjXKgRS4PRYgsq1pMq9YL", decimals: 9}
+            "USDECE": {name: "US Dece token", address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
+            "NODUCK": {name: "No duck token", address: "3ZWuguxLBKzmo1t9vCEPdebfjXKgRS4PRYgsq1pMq9YL", decimals: 9},
+            "SOMEXX": {name: "Some other tk", address: "8C9vSZe4JqeAXaV9j5PjTKMWxE5G2WfWXTbN3ADAMujx", decimals: 9},
         };
         
         // v--- Solana predefs ------------
@@ -38,201 +39,35 @@
         // ^-------------------------------
     </script>
     <style type="text/css">
-        
         * { box-sizing: border-box; }
-        
-        body {
-            font-family: arial, helvetica, sans-serif;
-        }
-        
-        #piggybank_withdrawal_widget.blocked {
-            cursor: wait;
-            pointer-events: none;
-            filter: grayscale(100%) blur(1px);
-        }
-        
-        .fixed_font {
-            font-family: 'lucida console', consolas, 'courier new', courier, monospace;
-        }
-        
-        .aligncenter {
-            text-align: center;
-        }
-        
-        .alignright {
-            text-align: right;
-        }
-        
-        .frame {
-            display: inline-block;
-            background: lightgoldenrodyellow;
-            border: 1px solid silver;
-            color: black;
-            padding: 2px 4px;
-        }
-        
-        .ellipsified {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        #step1, #step2 {
-            margin-top: 20px;
-            border-radius: 10px;
-        }
-        
-        #nfts_list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        
-        .nft {
-            position: relative;
-            display: inline-block;
-            vertical-align: top;
-            border: 1px solid transparent;
-            border-radius: 10px;
-            background: whitesmoke;
-            padding: 5px;
-            pointer-events: none;
-        }
-        
-        .nft .image {
-            position: relative;
-            display: inline-block;
-            vertical-align: top;
-            width: 200px;
-            height: 200px;
-            border-radius: 10px;
-            margin-bottom: 5px;
-        }
-        
-        .nft .image img {
-            object-fit: contain;
-            object-position: center center;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .nft .mint {
-            display: inline-block;
-            width: 100%;
-            border: 1px solid silver;
-            border-radius: 5px;
-            text-align: center;
-            padding: 2px;
-            margin-bottom: 5px;
-        }
-        
-        .nft .symbol {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            padding: 2px;
-        }
-        
-        .nft .name {
-            display: inline-block;
-            width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            padding: 2px;
-            text-overflow: ellipsis;
-        }
-        
-        .nft.enabled {
-            cursor: pointer;
-            pointer-events: auto;
-        }
-        
-        .nft.enabled:hover {
-            border-color: blue;
-        }
-        
-        .nft.selected {
-            background-color: azure;
-            border-color:     blue;
-            color: blue;
-            pointer-events: none;
-        }
-        
-        #nft_info {
-            display: grid;
-            width: 100%;
-            gap: 10px;
-            grid-template-columns: auto 1fr auto;
-            margin-top: 10px;
-        }
-        
-        #tokensList {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .tokenElement {
-            display: grid;
-            width: 100%;
-            grid-template-columns: auto 1fr 2fr auto 1fr;
-            gap: 10px;
-        }
-        
-        #withdrawalResult.done {
-            background-color: greenyellow;
-            border-radius: 10px;
-            color: green;
-            padding: 10px 5px;
-            text-align: center;
-            border: 1px solid green;
-            font-size: large;
-        }
-        
-        #progress_overlay {
-            pointer-events: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            display: none;
-        }
-
-        #progress_overlay.visible {
-            display: block;
-        }
-        
-        #progress_message {
-            display: inline-block;
-            background: lightgoldenrodyellow;
-            border: 2px solid silver;
-            box-shadow: 5px 5px 10px black;
-            text-align: center;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            padding: 5px;
-            border-radius: 5px;
-            transform: translate(-50%, -50%);
-        }
-        
-        #initial_warning {
-            background: #fffc9e;
-            border: 1px solid pink;
-            border-radius: 20px;
-            padding: 10px;
-            margin: 1em 0;
-        }
-        
-        #initial_warning *:first-child {
-            margin-top: 0;
-        }
-        
-        #initial_warning *:last-child {
-            margin-bottom: 0;
-        }
+        body {font-family: arial, helvetica, sans-serif;}
+        #piggybank_withdrawal_widget.blocked {cursor: wait;pointer-events: none;filter: grayscale(100%) blur(1px);}
+        .fixed_font {font-family: 'lucida console', consolas, 'courier new', courier, monospace;}
+        .aligncenter {text-align: center;}
+        .alignright {text-align: right;}
+        .frame {display: inline-block;background: lightgoldenrodyellow;border: 1px solid silver;color: black;padding: 2px 4px;}
+        .ellipsified {white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
+        #step1, #step2 {margin-top: 20px;border-radius: 10px;}
+        #nfts_list {display: flex;flex-wrap: wrap;gap: 20px;}
+        .nft {position: relative;display: inline-block;vertical-align: top;border: 1px solid transparent;border-radius: 10px;background: whitesmoke;padding: 5px;pointer-events: none;}
+        .nft .image {position: relative;display: inline-block;vertical-align: top;width: 200px;height: 200px;border-radius: 10px;margin-bottom: 5px;}
+        .nft .image img {object-fit: contain;object-position: center center;width: 100%;height: 100%;}
+        .nft .mint {display: inline-block;width: 100%;border: 1px solid silver;border-radius: 5px;text-align: center;padding: 2px;margin-bottom: 5px;}
+        .nft .symbol {display: inline-block;width: 100%;text-align: center;padding: 2px;}
+        .nft .name {display: inline-block;width: 100%;white-space: nowrap;overflow: hidden;padding: 2px;text-overflow: ellipsis;}
+        .nft.enabled {cursor: pointer;pointer-events: auto;}
+        .nft.enabled:hover {border-color: blue;}
+        .nft.selected {background-color: azure;border-color:     blue;color: blue;pointer-events: none;}
+        #nft_info {display: grid;width: 100%;gap: 10px;grid-template-columns: auto 1fr auto;margin-top: 10px;}
+        #tokensList {display: flex;flex-wrap: wrap;gap: 10px;margin-top: 10px;}
+        .tokenElement {display: grid;width: 100%;grid-template-columns: auto auto 1fr 2fr auto 1fr;gap: 10px;}
+        #withdrawalResult.done {background-color: greenyellow;border-radius: 10px;color: green;padding: 10px 5px;text-align: center;border: 1px solid green;font-size: large;}
+        #progress_overlay {pointer-events: none;position: absolute;top: 0;left: 0;width: 100vw;height: 100vh;display: none;}
+        #progress_overlay.visible {display: block;}
+        #progress_message {display: inline-block;background: lightgoldenrodyellow;border: 2px solid silver;box-shadow: 5px 5px 10px black;text-align: center;position: absolute;top: 50%;left: 50%;padding: 5px;border-radius: 5px;transform: translate(-50%, -50%);}
+        #initial_warning {background: #fffc9e;border: 1px solid pink;border-radius: 20px;padding: 10px;margin: 1em 0;}
+        #initial_warning *:first-child {margin-top: 0;}
+        #initial_warning *:last-child {margin-bottom: 0;}
     </style>
 </head>
 <body>
@@ -240,11 +75,12 @@
 <div id="piggybank_withdrawal_widget">
     <h1>
         <i class="fa fa-wallet"></i>
-        Piggy Bank Withdrawal Facility v0.0.7
+        Piggy Bank Withdrawal Facility v0.0.8
     </h1>
     
     <div id="initial_warning">
         <p>
+            <i class="fa fa-times-circle fa-lg fa-pull-right" onclick="$('#initial_warning').hide();" style="position: relative; top: 10px; cursor: pointer;"></i>
             This page is a fully descentralized webapp that interacts with the
             Phantom wallet to allow fungible token withdrawals owned by NFTs
             made with the VolkaChain Tokenizer Framework.
@@ -467,6 +303,7 @@
         for(let symbol in SUPPORTED_TOKENS)
         {
             const mintaddr = SUPPORTED_TOKENS[symbol].address;
+            const name     = SUPPORTED_TOKENS[symbol].name;
             const mint     = new solanaWeb3.PublicKey(mintaddr);
             const pda      = new solanaWeb3.PublicKey(vaultPDA);
             const ata      = await getAssociatedTokenAddress(mint, pda);
@@ -495,6 +332,7 @@
                        data-decimals="${decimals}">
                     <input type="radio" name="selectedToken" value="${ata}">
                     <span class="item_symbol">${symbol}</span>
+                    <span class="item_name">${name}</span>
                     <span class="fixed_font"><a href="${explorerUrl}" target="_blank">${short_addr}</a></span>
                     <span class="item_caption">Balance:</span>
                     <span class="balance fixed_font alignright">${balance}</span>

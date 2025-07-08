@@ -349,16 +349,16 @@
         
         for(let symbol in SUPPORTED_TOKENS)
         {
-            const mintaddr = SUPPORTED_TOKENS[symbol].address;
-            const name     = SUPPORTED_TOKENS[symbol].name;
-            const mint     = new solanaWeb3.PublicKey(mintaddr);
-            const pda      = new solanaWeb3.PublicKey(vaultPDA);
-            const ata      = await getAssociatedTokenAddress(mint, pda);
-            const addr     = ata.toBase58();
-            const decimals = SUPPORTED_TOKENS[symbol].decimals;
+            const mintaddr   = SUPPORTED_TOKENS[symbol].address;
+            const name       = SUPPORTED_TOKENS[symbol].name;
+            const mint       = new solanaWeb3.PublicKey(mintaddr);
+            const pda        = new solanaWeb3.PublicKey(vaultPDA);
+            const ata        = await getAssociatedTokenAddress(mint, pda);
+            const addr       = ata.toBase58();
+            const decimals   = SUPPORTED_TOKENS[symbol].decimals;
+            const short_addr = ellipsify_string(addr, 8);
             
-            let short_addr = addr.substring(0, 8) + '...' + addr.substring(addr.length - 8);
-            
+            showProgress(`Fetching <code>${short_addr}</code> info...`);
             const accountInfo = await connection.getAccountInfo(ata);
             
             if ( ! accountInfo ) {
@@ -493,35 +493,37 @@
         {
             const info = account.data.parsed.info;
             let token = {};
-            // console.log("Info:", info);
-            if( info.tokenAmount.decimals === 0 && info.tokenAmount.uiAmount === 1 )
-            {
-                token = {
-                    mint: info.mint,
-                    uri:  null,
-                };
-                
-                console.log('Mint:', token.mint);
-                const [metadataPDA] = solanaWeb3.PublicKey.findProgramAddressSync(
-                    [
-                        new TextEncoder().encode('metadata'),
-                        METADATA_PROGRAM_ID.toBuffer(),
-                        new solanaWeb3.PublicKey(token.mint).toBuffer(),
-                    ],
-                    METADATA_PROGRAM_ID
-                );
-                console.log('MetadataPDA:', metadataPDA.toBase58());
-                
-                const accountInfo = await connection.getAccountInfo(metadataPDA);
-                // console.log('Account info:', accountInfo);
-                const uri = extractUriFromMetadataAccount(accountInfo.data);
-                console.log(`Metadata URI: ${uri}`);
-                
-                token.uri = uri;
-                tokens.push(token);
-            }
+            if( info.tokenAmount.decimals !== 0 ) continue;
+            if( info.tokenAmount.uiAmount !== 1 ) continue;
+            
+            token = {
+                mint: info.mint,
+                uri:  null,
+            };
+            
+            console.log('Got NFT:', token.mint);
+            let short_addr = ellipsify_string(token.mint, 4);
+            showProgress(`Fetching <code>${short_addr}</code> metadata...`);
+            const [metadataPDA] = solanaWeb3.PublicKey.findProgramAddressSync(
+                [
+                    new TextEncoder().encode('metadata'),
+                    METADATA_PROGRAM_ID.toBuffer(),
+                    new solanaWeb3.PublicKey(token.mint).toBuffer(),
+                ],
+                METADATA_PROGRAM_ID
+            );
+            console.log('%c>>> MetadataPDA:', 'color: #B4ECFF', metadataPDA.toBase58());
+            
+            showProgress(`Fetching ${short_addr} account info...`);
+            const accountInfo = await connection.getAccountInfo(metadataPDA);
+            const uri = extractUriFromMetadataAccount(accountInfo.data);
+            console.log(`%c>>> Metadata URI: ${uri}`, 'color: #B4ECFF');
+            
+            token.uri = uri;
+            tokens.push(token);
         }
         
+        showProgress(`${tokens.length} NFTs found.`);
         let $container = $('#nfts_list');
         if( tokens.length === 0 )
         {
@@ -538,7 +540,7 @@
         $container.html('<div style="width: 100%">Select a token to check:</div>');
         for(const token of tokens)
         {
-            let short_mint = token.mint.substring(0, 8) + '...' + token.mint.substring(token.mint.length - 8);
+            let short_mint = ellipsify_string(token.mint, 4);
             $container.append(`
                 <span class="nft" data-mint="${token.mint}" data-uri="${token.uri}"
                       onclick="setSelectedToken(this)">
@@ -757,7 +759,7 @@
         toggleUI('on');
         hideProgress();
         let url = explorerLink.replace("<endpoint>", "tx").replace("<data>", sig);
-        let shortened_sig = sig.substring(0, 8) + '...' + sig.substring(sig.length - 8);
+        let shortened_sig = ellipsify_string(sig, 8);
         let $target = $(('#withdrawalResult'));
         $target
             .toggleClass('done', true)
@@ -830,6 +832,12 @@
         }
         return false;
         // throw new Error("NFT token account not found or user does not own this NFT.");
+    }
+    
+    function ellipsify_string(string, length)
+    {
+        let side = Math.floor(length / 2);
+        return string.substring(0, side) + '…' + string.substring(string.length - side);
     }
 </script>
 

@@ -15,6 +15,10 @@
         // INITIAL DEFINITIONS //
         //---------------------//
         
+        /////////////////////////////////
+        const script_version = "0.0.9-1";
+        /////////////////////////////////
+        
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
         let wallet = null; // Will hold the Phantom wallet public key
         let wallet_provider = null;
@@ -39,14 +43,15 @@
         // ^-------------------------------
     </script>
     <style type="text/css">
-        * { box-sizing: border-box; }
+        * {box-sizing: border-box;}
         body {font-family: arial, helvetica, sans-serif;}
         #piggybank_withdrawal_widget.blocked {cursor: wait;pointer-events: none;filter: grayscale(100%) blur(1px);}
         .fixed_font {font-family: 'lucida console', consolas, 'courier new', courier, monospace;}
         .aligncenter {text-align: center;}
         .alignright {text-align: right;}
         .frame {display: inline-block;background: lightgoldenrodyellow;border: 1px solid silver;color: black;padding: 2px 4px;}
-        .ellipsified {white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
+        .ellipsified {display: inline-block;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
+        .pseudo_link {cursor: pointer;}
         #step1, #step2 {margin-top: 20px;border-radius: 10px;}
         #nfts_list {display: flex;flex-wrap: wrap;gap: 20px;}
         .nft {position: relative;display: inline-block;vertical-align: top;border: 1px solid transparent;border-radius: 10px;background: whitesmoke;padding: 5px;pointer-events: none;}
@@ -65,9 +70,11 @@
         #progress_overlay {pointer-events: none;position: absolute;top: 0;left: 0;width: 100vw;height: 100vh;display: none;}
         #progress_overlay.visible {display: block;}
         #progress_message {display: inline-block;background: lightgoldenrodyellow;border: 2px solid silver;box-shadow: 5px 5px 10px black;text-align: center;position: absolute;top: 50%;left: 50%;padding: 5px;border-radius: 5px;transform: translate(-50%, -50%);}
-        #initial_warning {background: #fffc9e;border: 1px solid pink;border-radius: 20px;padding: 10px;margin: 1em 0;}
-        #initial_warning *:first-child {margin-top: 0;}
-        #initial_warning *:last-child {margin-bottom: 0;}
+        #initial_warning {display: none;position: absolute;top: 0;left: 0;width: 100vw;height: 100vh;background: rgba(0, 0, 0, 0.5);backdrop-filter: blur(5px);}
+        #initial_warning .content {position: relative;top: 50%; left: 50%; transform: translate(-50%, -50%);max-width: 80vw; max-height: 80vh;display: grid;grid-template-rows: auto 1fr;gap: 10px;background: #fffc9e;border: 1px solid pink;border-radius: 20px;padding: 10px;margin: 1em 0;box-shadow: 5px 5px 20px black;}
+        #initial_warning .inner_content {overflow: auto;}
+        #initial_warning .inner_content *:first-child {margin-top: 0;}
+        #initial_warning .inner_content *:last-child {margin-bottom: 0;}
     </style>
 </head>
 <body>
@@ -75,76 +82,8 @@
 <div id="piggybank_withdrawal_widget">
     <h1>
         <i class="fa fa-wallet"></i>
-        Piggy Bank Withdrawal Facility v0.0.8
+        Piggy Bank Withdrawal Facility v<span class="script_version">N/A</span>
     </h1>
-    
-    <div id="initial_warning">
-        <p>
-            <i class="fa fa-times-circle fa-lg fa-pull-right" onclick="$('#initial_warning').hide();" style="position: relative; top: 10px; cursor: pointer;"></i>
-            This page is a fully descentralized webapp that interacts with the
-            Phantom wallet to allow fungible token withdrawals owned by NFTs
-            made with the VolkaChain Tokenizer Framework.
-        </p>
-        <p>
-            It won't run any transaction other than calling the smart contract
-            that transfers the tokens from the NFT you own to your wallet.
-        </p>
-        <p>
-            <i class="fa fa-warning"></i> <b>Important:</b>
-            This file should be hosted at <b>https://irys.xyz</b>.
-            If the URL on your browser address bar doesn't match, then <b>you're at the wrong location.</b>
-        </p>
-        <p>
-            <b style="color: red">Never open this file directly.</b>
-            Always go to the NFT and click on the "Website" or "External link" attribute.
-            That link points to the latest version of this file as stored on the Solana blockchain.
-            <a href="https://explorer.solana.com/address/2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn?cluster=devnet" target="_top">Go to the NFT profile now <i class="fa fa-external-link"></i></a><br>
-            <b>Bookmark the NFT page, not this one!</b>
-        </p>
-        <p>
-            <strong><i class="fa fa-info-circle"></i> Disclaimer:</strong>
-            This interface is provided as-is, without warranties or obligations of any kind.
-            Always double-check transaction details in your wallet.
-        </p>
-        <p>
-            If you want to compare this page against the published one in the GitHub repo,
-            You can do it by following the next instructions:
-        </p>
-        <ol>
-            <li>
-                Hit Ctrl-U (Windows) or Command-Option-U (Mac) to view the source code of this page.
-                It will open on a new tab.
-            </li>
-            <li>
-                Open the raw content of the latest published version of this page at GitHub on a new tab:
-                <a href="https://github.com/path/to/repo">github.com/path/to/repo</a>
-            </li>
-            <li>
-                Open Diffchecker on another tab:
-                <a href="https://www.diffchecker.com/" target="_blank">www.diffchecker.com</a>
-            </li>
-            <li>
-                Copy the raw content of the page at GitHub and paste it on the <u>Original text</u> area of DiffChecker.
-            </li>
-            <li>
-                Copy the source code of this page and paste it at the <u>Changed text</u> area of DiffChecker.
-            </li>
-            <li>
-                Make sure that both areas have the same amount of code lines!
-                Sometimes, the browser adds blank lines at the top and/or the bottom of the source code.<br>
-                If you spot them, remove them.
-            </li>
-            <li>
-                Hit the "Find difference" button. You should see no differences.
-                If there are any, then <b>don't trust this page</b>.
-            </li>
-        </ol>
-        <p>
-            <button onclick="$('#initial_warning').hide();">
-                <i class="fa fa-times"></i> Dismiss
-            </button>
-        </p>
-    </div>
     
     <p>
         Your wallet:
@@ -191,8 +130,103 @@
     <div id="progress_message"></div>
 </div>
 
+<div id="initial_warning">
+    <div class="content">
+        <h2 style="display: grid; grid-template-columns: 1fr auto; width: 100%; margin: 0 0 5px 0; gap: 10px;">
+            <span class="ellipsified">
+                Piggy Bank Withdrawal Facility v<span class="script_version">N/A</span>
+            </span>
+            <span class="close_trigger">
+                <i id="warn_closer" class="pseudo_link fa fa-times-circle fa-lg" onclick="hideWarn()"></i>
+            </span>
+        </h2>
+        <div class="inner_content">
+            <p>
+                This page is a fully descentralized webapp that interacts with the
+                Phantom wallet to allow fungible token withdrawals owned by NFTs
+                made with the VolkaChain Tokenizer Framework.
+            </p>
+            <p>
+                It won't run any transaction other than calling the smart contract
+                that transfers the tokens from the NFT you own to your wallet.
+            </p>
+            <p>
+                <i class="fa fa-warning"></i> <b>Important:</b>
+                This file should be hosted at <b>https://irys.xyz</b>.
+                If the URL on your browser address bar doesn't match, then <b>you're at the wrong location.</b>
+            </p>
+            <p>
+                <b style="color: red">Never open this file directly.</b>
+                Always go to the NFT and click on the "Website" or "External link" attribute.
+                That link points to the latest version of this file as stored on the Solana blockchain.
+                <a href="https://explorer.solana.com/address/2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn?cluster=devnet" target="_top">Go to the NFT profile now <i class="fa fa-external-link"></i></a><br>
+                <b>Bookmark the NFT page, not this one!</b>
+            </p>
+            <p>
+                <strong><i class="fa fa-info-circle"></i> Disclaimer:</strong>
+                This interface is provided as-is, without warranties or obligations of any kind.
+                Always double-check transaction details in your wallet.
+            </p>
+            <p>
+                If you want to compare this page against the published one in the GitHub repo,
+                You can do it by following the next instructions:
+            </p>
+            <ol>
+                <li>
+                    Hit Ctrl-U (Windows) or Command-Option-U (Mac) to view the source code of this page.
+                    It will open on a new tab.
+                </li>
+                <li>
+                    Open the raw content of the latest published version of this page at GitHub on a new tab:
+                    <a href="https://github.com/path/to/repo">github.com/path/to/repo</a>
+                </li>
+                <li>
+                    Open Diffchecker on another tab:
+                    <a href="https://www.diffchecker.com/" target="_blank">www.diffchecker.com</a>
+                </li>
+                <li>
+                    Copy the raw content of the page at GitHub and paste it on the <u>Original text</u> area of DiffChecker.
+                </li>
+                <li>
+                    Copy the source code of this page and paste it at the <u>Changed text</u> area of DiffChecker.
+                </li>
+                <li>
+                    Make sure that both areas have the same amount of code lines!
+                    Sometimes, the browser adds blank lines at the top and/or the bottom of the source code.<br>
+                    If you spot them, remove them.
+                </li>
+                <li>
+                    Hit the "Find difference" button. You should see no differences.
+                    If there are any, then <b>don't trust this page</b>.
+                </li>
+            </ol>
+            <p class="aligncenter">
+                <button onclick="hideWarn()">
+                    <i class="fa fa-times"></i> Dismiss
+                </button>
+            </p>
+        </div>
+    </div>
+</div>
+
+
 <script>
-    $(document).ready(function() {
+    
+    function showWarn()
+    {
+        $('body').css('overflow', 'hidden');
+        $('#initial_warning').show();
+    }
+    
+    function hideWarn()
+    {
+        if( sessionStorage ) sessionStorage.setItem('vkwf_warn_seen', 'true');
+        $('body').css('overflow', 'auto');
+        $('#initial_warning').hide();
+    }
+    
+    $(document).ready(function()
+    {
         if( window.location.href !== window.top.location.href )
         {
             $('#piggybank_withdrawal_widget').html(`
@@ -202,7 +236,20 @@
                     All functions have been disabled.
                 </div>
             `);
+            return;
         }
+        
+        $('.script_version').text(script_version);
+        
+        if( ! sessionStorage )
+        {
+            showWarn();
+            return;
+        }
+        
+        if( sessionStorage.getItem('vkwf_warn_seen') ) return;
+        
+        showWarn();
     });
 </script>
 <script>

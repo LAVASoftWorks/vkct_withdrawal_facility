@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <title>Piggy Bank Withdrawal Facility</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
             integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
@@ -15,9 +16,9 @@
         // INITIAL DEFINITIONS //
         //---------------------//
         
-        /////////////////////////////////
-        const script_version = "0.0.9-1";
-        /////////////////////////////////
+        ////////////////////////////////
+        const script_version = "0.0.10";
+        ////////////////////////////////
         
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
         let wallet = null; // Will hold the Phantom wallet public key
@@ -54,18 +55,20 @@
         .pseudo_link {cursor: pointer;}
         #step1, #step2 {margin-top: 20px;border-radius: 10px;}
         #nfts_list {display: flex;flex-wrap: wrap;gap: 20px;}
-        .nft {position: relative;display: inline-block;vertical-align: top;border: 1px solid transparent;border-radius: 10px;background: whitesmoke;padding: 5px;pointer-events: none;}
-        .nft .image {position: relative;display: inline-block;vertical-align: top;width: 200px;height: 200px;border-radius: 10px;margin-bottom: 5px;}
+        .nft {position: relative;display: inline-block;width: 180px;vertical-align: top;border: 1px solid transparent;border-radius: 10px;background: whitesmoke;padding: 5px;pointer-events: none;}
+        .nft .image {position: relative;display: inline-block;vertical-align: top;width: 100%;aspect-ratio: 1/1;border-radius: 10px;margin-bottom: 5px;}
         .nft .image img {object-fit: contain;object-position: center center;width: 100%;height: 100%;}
         .nft .mint {display: inline-block;width: 100%;border: 1px solid silver;border-radius: 5px;text-align: center;padding: 2px;margin-bottom: 5px;}
         .nft .symbol {display: inline-block;width: 100%;text-align: center;padding: 2px;}
         .nft .name {display: inline-block;width: 100%;white-space: nowrap;overflow: hidden;padding: 2px;text-overflow: ellipsis;}
         .nft.enabled {cursor: pointer;pointer-events: auto;}
         .nft.enabled:hover {border-color: blue;}
-        .nft.selected {background-color: azure;border-color:     blue;color: blue;pointer-events: none;}
+        .nft.selected {background-color: azure;border-color: blue;color: blue;pointer-events: none;}
+        .nft.disabled {background-color: white;border-color: dimgray;color: dimgray;pointer-events: none;filter: grayscale(100%);opacity: 0.5;}
+        .nft.disabled .image img { filter: brightness(1.5) contrast(0.5); }
         #nft_info {display: grid;width: 100%;gap: 10px;grid-template-columns: auto 1fr auto;margin-top: 10px;}
         #tokensList {display: flex;flex-wrap: wrap;gap: 10px;margin-top: 10px;}
-        .tokenElement {display: grid;width: 100%;grid-template-columns: auto auto 1fr 2fr auto 1fr;gap: 10px;}
+        .tokenElement {display: grid;width: 100%;grid-template-columns: 24px 80px 1fr 2fr 1fr auto 1fr;justify-items: start;align-items: center;gap: 10px;}
         #withdrawalResult.done {background-color: greenyellow;border-radius: 10px;color: green;padding: 10px 5px;text-align: center;border: 1px solid green;font-size: large;}
         #progress_overlay {pointer-events: none;position: absolute;top: 0;left: 0;width: 100vw;height: 100vh;display: none;}
         #progress_overlay.visible {display: block;}
@@ -108,6 +111,9 @@
             <span class="caption">NFT metadata URI:</span>
             <input type="text" readonly id="metadata_uri" value="">
             <a id="link_to_nft_metadata" href="" target="_blank"><i class="fa fa-external-link fa-fw"></i></a>
+            <span class="caption">NFT piggy bank address:</span>
+            <input type="text" readonly id="vault_pda" value="">
+            <a id="link_to_vault_pda" href="" target="_blank"><i class="fa fa-external-link fa-fw"></i></a>
         </div>
     </fieldset>
     
@@ -291,7 +297,6 @@
     {
         toggleUI('off');
         showProgress("Fetching NFT metadata...");
-        let mint = $('#nft_address').val().trim();
         let uri  = $('#metadata_uri').val().trim();
         if( uri === '' )
         {
@@ -306,6 +311,8 @@
             if( data.attributes === undefined )
             {
                 alert('Invalid data received.');
+                toggleUI('on');
+                hideProgress();
                 return;
             }
             
@@ -322,14 +329,16 @@
             if( vaultPDA === null )
             {
                 alert("Could'nt find the piggy bank address in the NFT metadata.");
-                $(`#nfts_list .nft[data-mint="${mint}"]`)
-                    .toggleClass('selected', false)
-                    .toggleClass('enabled', false);
+                disableSelectedToken();
                 $('#step1, #step2').hide();
                 toggleUI('on');
                 hideProgress();
                 return;
             }
+            
+            $('#vault_pda').val(vaultPDA);
+            const pda_link = explorerLink.replace('<endpoint>', 'address').replace('<data>', vaultPDA);
+            $('#link_to_vault_pda').attr('href', pda_link);
             
             populateTokenDropdown();
         })
@@ -347,49 +356,87 @@
         const $container = $("#tokensList");
         $container.html('');
         
-        for(let symbol in SUPPORTED_TOKENS)
+        showProgress("Fetching NFT piggy bank accounts...");
+        const pb_pda   = new solanaWeb3.PublicKey(vaultPDA);
+        const accounts = await connection.getParsedTokenAccountsByOwner(pb_pda, {
+            programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID)
+        });
+        if( accounts.value.length === 0 )
         {
-            const mintaddr   = SUPPORTED_TOKENS[symbol].address;
-            const name       = SUPPORTED_TOKENS[symbol].name;
-            const mint       = new solanaWeb3.PublicKey(mintaddr);
-            const pda        = new solanaWeb3.PublicKey(vaultPDA);
-            const ata        = await getAssociatedTokenAddress(mint, pda);
-            const addr       = ata.toBase58();
-            const decimals   = SUPPORTED_TOKENS[symbol].decimals;
-            const short_addr = ellipsify_string(addr, 8);
-            
-            showProgress(`Fetching <code>${short_addr}</code> info...`);
-            const accountInfo = await connection.getAccountInfo(ata);
-            
-            if ( ! accountInfo ) {
-                console.log(`Account info for ${symbol} ATA (${addr}) not found!`);
-                continue;
+            disableSelectedToken();
+            alert("This NFT doesn't have piggy bank accounts.");
+            $('#step1, #step2').hide();
+            toggleUI('on');
+            hideProgress();
+            return;
+        }
+        const atas_by_mint = {};
+        for(let item of accounts.value)
+        {
+            const account = item.account;
+            if( ! (account.data && account.data.parsed && account.data.parsed.info) ) continue;
+            const item_pubkey = item.pubkey.toBase58();
+            const item_info   = account.data.parsed.info;
+            const item_mint   = item_info.mint;
+            atas_by_mint[item_mint] = item_pubkey;
+        }
+        if( Object.keys(atas_by_mint).length === 0 )
+        {
+            disableSelectedToken();
+            alert("No compatible piggy bank accounts found for this NFT.");
+            $('#step1, #step2').hide();
+            toggleUI('on');
+            hideProgress();
+            return;
+        }
+        
+        for(let mintaddr in atas_by_mint)
+        {
+            let addr = atas_by_mint[mintaddr];
+            for(let symbol in SUPPORTED_TOKENS)
+            {
+                let supported_token = SUPPORTED_TOKENS[symbol];
+                if( supported_token.address === mintaddr )
+                {
+                    const name       = SUPPORTED_TOKENS[symbol].name;
+                    const ata        = new solanaWeb3.PublicKey(addr);
+                    const decimals   = SUPPORTED_TOKENS[symbol].decimals;
+                    const short_mint = ellipsify_string(mintaddr, 8);
+                    const short_addr = ellipsify_string(addr, 4);
+                    showProgress(`Fetching <code>${short_addr}</code> info...`);
+                    const accountInfo = await connection.getAccountInfo(ata);
+                    
+                    if ( ! accountInfo ) {
+                        console.log(`Account info for ${symbol} ATA (${addr}) not found!`);
+                        continue;
+                    }
+                    
+                    const { amount }    = parseSplTokenAccountData(accountInfo.data);
+                    const displayAmount = Number(amount) / Math.pow(10, decimals);
+                    const balance       = displayAmount.toString();
+                    const explorerUrl1  = explorerLink.replace('<endpoint>', 'address').replace('<data>', mintaddr);
+                    const explorerUrl2  = explorerLink.replace('<endpoint>', 'address').replace('<data>', addr);
+                    
+                    $container.append(`
+                        <label class="tokenElement" data-symbol="${symbol}" 
+                               data-mint="${mintaddr}"
+                               data-decimals="${decimals}">
+                            <input type="radio" name="selectedToken" value="${ata}">
+                            <span class="item_symbol">${symbol}</span>
+                            <span class="item_name">${name}</span>
+                            <span class="fixed_font"><a href="${explorerUrl1}" target="_blank"><i class="fa fa-info-circle fa-fw"></i>${short_mint}</a></span>
+                            <span class="fixed_font"><a href="${explorerUrl2}" target="_blank"><i class="fa fa-wallet fa-fw"></i>${short_addr}</a></span>
+                            <span class="item_caption">Balance:</span>
+                            <span class="balance fixed_font" style="justify-self: right">${balance}</span>
+                        </label>
+                    `);
+                }
             }
-            
-            const { amount } = parseSplTokenAccountData(accountInfo.data);
-            
-            // Human friendly balance
-            const displayAmount = Number(amount) / Math.pow(10, decimals);
-            const balance       = displayAmount.toString();
-            const explorerUrl   = explorerLink.replace('<endpoint>', 'address').replace('<data>', mintaddr);
-            
-            $container.append(`
-                <label class="tokenElement" data-symbol="${symbol}" 
-                       data-mint="${mintaddr}"
-                       data-decimals="${decimals}">
-                    <input type="radio" name="selectedToken" value="${ata}">
-                    <span class="item_symbol">${symbol}</span>
-                    <span class="item_name">${name}</span>
-                    <span class="fixed_font"><a href="${explorerUrl}" target="_blank">${short_addr}</a></span>
-                    <span class="item_caption">Balance:</span>
-                    <span class="balance fixed_font alignright">${balance}</span>
-                </label>
-            `);
         }
         
         if( $container.find('.tokenElement').length === 0 )
         {
-            $container.append(`<p class="error">No piggy bank info found.</p>`);
+            $container.append(`<p class="error">No valid piggy bank accounts found for this NFT.</p>`);
             toggleUI('on');
             hideProgress();
             return
@@ -434,6 +481,11 @@
         
         $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
         getNFTmetadata();
+    }
+    
+    function disableSelectedToken()
+    {
+        $(`#nfts_list .nft.selected`).toggleClass('selected', false).toggleClass('enabled', false).toggleClass('disabled', true);
     }
 </script>
 
@@ -834,10 +886,9 @@
         // throw new Error("NFT token account not found or user does not own this NFT.");
     }
     
-    function ellipsify_string(string, length)
+    function ellipsify_string(string, side_length)
     {
-        let side = Math.floor(length / 2);
-        return string.substring(0, side) + '…' + string.substring(string.length - side);
+        return string.substring(0, side_length) + '…' + string.substring(string.length - side_length);
     }
 </script>
 

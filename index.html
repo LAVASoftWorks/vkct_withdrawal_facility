@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Piggy Bank Withdrawal Facility</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
     <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.js"></script>
@@ -17,7 +18,7 @@
         //---------------------//
         
         ////////////////////////////////
-        const script_version = "0.0.10";
+        const script_version = "0.0.14";
         ////////////////////////////////
         
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
@@ -53,6 +54,7 @@
         .frame {display: inline-block;background: lightgoldenrodyellow;border: 1px solid silver;color: black;padding: 2px 4px;}
         .ellipsified {display: inline-block;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;}
         .pseudo_link {cursor: pointer;}
+        .nowrap {display: inline-block; white-space: nowrap;}
         #step1, #step2 {margin-top: 20px;border-radius: 10px;}
         #nfts_list {display: flex;flex-wrap: wrap;gap: 20px;}
         .nft {position: relative;display: inline-block;width: 180px;vertical-align: top;border: 1px solid transparent;border-radius: 10px;background: whitesmoke;padding: 5px;pointer-events: none;}
@@ -78,15 +80,24 @@
         #initial_warning .inner_content {overflow: auto;}
         #initial_warning .inner_content *:first-child {margin-top: 0;}
         #initial_warning .inner_content *:last-child {margin-bottom: 0;}
+        #credits { margin-top: 20px; padding-top: 20px; border-top: 2px solid silver; font-size: small; line-height: 1.5em; }
+        a { display: inline-block; white-space: nowrap; }
     </style>
 </head>
 <body>
 
+<!-- ============= -->
+<!-- Widget itself -->
+<!-- ============= -->
+
 <div id="piggybank_withdrawal_widget">
-    <h1>
+    <h1 style="margin-bottom: 10px">
         <i class="fa fa-wallet"></i>
-        Piggy Bank Withdrawal Facility v<span class="script_version">N/A</span>
+        Piggy Bank Withdrawal Facility
     </h1>
+    <h2 style="margin-top: 0; font-style: italic;">
+        Version <span class="script_version">N/A</span>
+    </h2>
     
     <p>
         Your wallet:
@@ -126,7 +137,28 @@
         </p>
         <p id="withdrawalResult" style="margin-bottom: 0"></p>
     </fieldset>
+    
+    <p id="credits" class="aligncenter">
+        Part of the <i>VolkaChain framework</i> by
+        <a href="https://www.lavasoftworks.com" target="_blank"><i class="fa-solid fa-volcano fa-fw"></i>LAVA SoftWorks</a>
+        •
+        Open sourced at <a href="https://github.com" target="_blank"><i class="fa-brands fa-github fa-fw"></i>GitHub</a>
+        <br>
+        Powered by
+        <a href="https://solana.com/docs/clients/javascript" target="_blank"><i class="fa fa-cubes fa-fw"></i>Solana Web3</a>
+        •
+        <a href="https://irys.xyz/" target="_blank"><i class="fa fa-server fa-fw"></i>Irys</a>
+        •
+        <a href="https://jquery.com/" target="_blank"><i class="fa-brands fa-js fa-fw"></i>jQuery</a>
+        •
+        <a href="https://fontawesome.com/" target="_blank"><i class="fa-brands fa-font-awesome fa-fw"></i>FontAwesome</a><br>
+        <a href="#" onclick="showWarn()"><i class="fa fa-info-circle fa-fw"></i>About this page</a>
+    </p>
 </div>
+
+<!-- =============== -->
+<!-- Helper sections -->
+<!-- =============== -->
 
 <template id="withdrawalResult_src">
     <button id="witdhraw_button" onclick="withdraw()"><i class="fa fa-upload"></i> Withdraw</button>
@@ -215,8 +247,14 @@
     </div>
 </div>
 
+<!-- ============ -->
+<!-- Script logic -->
+<!-- ============ -->
 
 <script>
+    //-----------//
+    // Bootstrap //
+    //-----------//
     
     function showWarn()
     {
@@ -258,6 +296,7 @@
         showWarn();
     });
 </script>
+
 <script>
     //--------------------//
     // User interface ops //
@@ -486,6 +525,24 @@
     function disableSelectedToken()
     {
         $(`#nfts_list .nft.selected`).toggleClass('selected', false).toggleClass('enabled', false).toggleClass('disabled', true);
+    }
+    
+    function resetUI()
+    {
+        $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
+        let $controls = $("#piggybank_withdrawal_widget").find('input:not(#dest), button');
+        $controls.prop('disabled', false);
+        
+        let mint = $('#nft_address').val();
+        let item = $(`#nfts_list .nft[data-mint="${mint}"]`)[0];
+        setSelectedToken(item);
+        toggleUI('on');
+        hideProgress();
+    }
+    
+    function ellipsify_string(string, side_length)
+    {
+        return string.substring(0, side_length) + '…' + string.substring(string.length - side_length);
     }
 </script>
 
@@ -824,19 +881,6 @@
             `);
     }
     
-    function resetUI()
-    {
-        $('#withdrawalResult').html( $('#withdrawalResult_src').html() ).toggleClass('done', false);
-        let $controls = $("#piggybank_withdrawal_widget").find('input:not(#dest), button');
-        $controls.prop('disabled', false);
-        
-        let mint = $('#nft_address').val();
-        let item = $(`#nfts_list .nft[data-mint="${mint}"]`)[0];
-        setSelectedToken(item);
-        toggleUI('on');
-        hideProgress();
-    }
-    
     function buildWithdrawData(amount)
     {
         // Use the discriminator from your IDL
@@ -854,7 +898,8 @@
         return data;
     }
     
-    async function getAssociatedTokenAddress(mint, owner) {
+    async function getAssociatedTokenAddress(mint, owner)
+    {
         // See: @solana/spl-token getAssociatedTokenAddress() in web3.js
         return (
             solanaWeb3.PublicKey.findProgramAddressSync(
@@ -868,7 +913,8 @@
         )[0];
     }
     
-    async function isHolderOf(nftMint) {
+    async function isHolderOf(nftMint)
+    {
         const accounts = await connection.getTokenAccountsByOwner(wallet, {
             mint: nftMint
         });
@@ -884,11 +930,6 @@
         }
         return false;
         // throw new Error("NFT token account not found or user does not own this NFT.");
-    }
-    
-    function ellipsify_string(string, side_length)
-    {
-        return string.substring(0, side_length) + '…' + string.substring(string.length - side_length);
     }
 </script>
 

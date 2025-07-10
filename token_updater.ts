@@ -24,7 +24,7 @@ import {getTransactionCost} from "./helpers/getTransactionCost";
 const ASSET_ADDRESS          = "2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn";
 const TOKEN_METADATA_PROGRAM = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID);
 const NEW_ASSET_FILE         = "index.html";
-const NEW_ASSET_VERSION      = "0.0.10";
+const NEW_ASSET_VERSION      = "0.0.14";
 
 //
 // Segment: load coins for devnet
@@ -37,6 +37,7 @@ const connection = new Connection(clusterApiUrl("devnet"));
 // See https://github.com/solana-developers/helpers?tab=readme-ov-file#get-a-keypair-from-a-keypair-file
 // assumes that the keypair is already generated using `solana-keygen new`
 const user = await getKeypairFromFile();
+console.log("Starting update token to version", NEW_ASSET_VERSION);
 console.log("Asset:", ASSET_ADDRESS);
 console.log("Loaded user:", user.publicKey.toBase58());
 

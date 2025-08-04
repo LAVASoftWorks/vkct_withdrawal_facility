@@ -1,5 +1,5 @@
 /**
- * Initializes the 
+ * Initializes the NFT that contains the withdrawal script
  * 
  * npx esrun token_initializer.ts
  */
@@ -22,8 +22,8 @@ import { getUploadPriceInSol } from "./helpers/getUploadPriceInSol";
 // Note: needed vars
 //
 
-const ASSET_NAME           = "VolkaChain Withdrawal Facility";
-const ASSET_SYMBOL         = "VKWF"; // Warn: 10 chars max
+const ASSET_NAME           = "Volkachain Tokenizer Withdrawal Facility";
+const ASSET_SYMBOL         = "VKCTWF"; // Warn: 10 chars max
 const ASSET_DESCRIPTION    = "A token that stores the stand-alone HTML page used to withdraw fungible tokens owned by NFTs built with the VolkaChain Tokenizer Framework";
 const ASSET_IMAGE_PATH     = "icon.png";
 const ASSET_FILE           = "index.html";

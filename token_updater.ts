@@ -24,7 +24,7 @@ import {getTransactionCost} from "./helpers/getTransactionCost";
 const ASSET_ADDRESS          = "2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn";
 const TOKEN_METADATA_PROGRAM = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID);
 const NEW_ASSET_FILE         = "index.html";
-const NEW_ASSET_VERSION      = "0.0.14";
+const NEW_ASSET_VERSION      = "0.5.0";
 
 //
 // Segment: load coins for devnet

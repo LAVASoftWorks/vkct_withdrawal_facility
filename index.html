@@ -18,7 +18,7 @@
         //---------------------//
         
         ///////////////////////////////
-        const script_version = "0.5.0";
+        const script_version = "0.6.0";
         ///////////////////////////////
         
         const connection    = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
@@ -27,12 +27,11 @@
         let wallet_address  = null;
         const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
         
-        const PIGGYBANK_PROGRAM_ID = "9ceUd429wyykAeL77fjW57rdn6VhQhFDBwQ3FsTpDcaY"; // Update this
+        const PIGGYBANK_PROGRAM_ID = "9ceUd429wyykAeL77fjW57rdn6VhQhFDBwQ3FsTpDcaY"; // Update from the contract build
         const IDL_DISCRIMINATOR    = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
-        const TOKEN_REGISTRY_PDA   = "DEFXPUZqWdRztRGJY6mhRYG6esTciM18dRT9zGyjjWD4"; // Update this
-        const COLLECTION_REG_PDA   = "9kW48txQptSLC4nN8GwGkNh52mJK7TdaRsktoycrucA6"; // Update this
-        const PIGGYBANK_TRAIT_KEY  = "Piggy bank address";                           
-        //    ^-- The trait type in the NFT metadata that has the PDA
+        const TOKEN_REGISTRY_PDA   = "DEFXPUZqWdRztRGJY6mhRYG6esTciM18dRT9zGyjjWD4"; // Update from the registry init script
+        const COLLECTION_REG_PDA   = "9kW48txQptSLC4nN8GwGkNh52mJK7TdaRsktoycrucA6"; // Update from the registry init script
+        const PIGGYBANK_TRAIT_KEY  = "Piggy bank address"; // This is set by the tokenization backend
         const COLLECTION_TRAIT_KEY = "CMRA";                           
         
         const SUPPORTED_TOKENS = {
@@ -790,6 +789,15 @@
         const collectionMint     = new solanaWeb3.PublicKey(nftCollectionAddr);
         const collectionRegPDA   = new solanaWeb3.PublicKey(COLLECTION_REG_PDA);
         
+        const [metadataPDA] = solanaWeb3.PublicKey.findProgramAddressSync(
+            [
+                new TextEncoder().encode('metadata'),
+                METADATA_PROGRAM_ID.toBuffer(),
+                nftMint.toBuffer(),
+            ],
+            METADATA_PROGRAM_ID
+        );
+        
         // 4. The rest: Programs and sysvars
         let keys = [
             { pubkey: walletPubkey,                  isSigner: true,  isWritable: true  }, // [ 0] signer
@@ -802,9 +810,10 @@
             { pubkey: collectionRegPDA,              isSigner: false, isWritable: false }, // [ 7] collection_registry PDA
             { pubkey: vaultSplTokenAccount,          isSigner: false, isWritable: true  }, // [ 8] vault_token_ata (ATA of SPL token, authority = vault PDA)
             { pubkey: userSplTokenAccount,           isSigner: false, isWritable: true  }, // [ 9] user_token_ata (ATA of SPL token, authority = signer)
-            { pubkey: TOKEN_PROGRAM_ID,              isSigner: false, isWritable: false }, // [10] token_program
-            { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,   isSigner: false, isWritable: false }, // [11] associated_token_program
-            { pubkey: solanaWeb3_SystemProgram,      isSigner: false, isWritable: false }, // [12] system_program
+            { pubkey: metadataPDA,                   isSigner: false, isWritable: false }, // [10] NFT Metadata PDA
+            { pubkey: TOKEN_PROGRAM_ID,              isSigner: false, isWritable: false }, // [11] token_program
+            { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,   isSigner: false, isWritable: false }, // [12] associated_token_program
+            { pubkey: solanaWeb3_SystemProgram,      isSigner: false, isWritable: false }, // [13] system_program
         ];
         
         console.log(`
@@ -818,9 +827,10 @@
             Key  7 (Collection registry PDA):    ${keys[ 7].pubkey.toString()}
             Key  8 (Vault SPL token account):    ${keys[ 8].pubkey.toString()}
             Key  9 (User SPL token account):     ${keys[ 9].pubkey.toString()}
-            Key 10 (Solana token program):       ${keys[10].pubkey.toString()}
-            Key 11 (Solana assoc token program): ${keys[11].pubkey.toString()}
-            Key 12 (Solana SYSTEM PROGRAM):      ${keys[12].pubkey.toString()}
+            Key 10 (NFT metadata PDA):           ${keys[10].pubkey.toString()}
+            Key 11 (Solana token program):       ${keys[11].pubkey.toString()}
+            Key 12 (Solana assoc token program): ${keys[12].pubkey.toString()}
+            Key 13 (Solana SYSTEM PROGRAM):      ${keys[13].pubkey.toString()}
         `.replace(/ {12}K/g, 'K'));
         
         $controls.prop('disabled', true);

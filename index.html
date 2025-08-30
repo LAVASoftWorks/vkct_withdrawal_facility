@@ -21,7 +21,9 @@
         const script_version = "0.6.0";
         ///////////////////////////////
         
-        const connection    = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("devnet"));
+        let API_URL = "https://api.mainnet-beta.solana.com";
+        let connection;
+        
         let wallet          = null; // Will hold the Phantom wallet public key
         let wallet_provider = null;
         let wallet_address  = null;
@@ -101,6 +103,18 @@
     <h2 style="margin-top: 0; font-style: italic;">
         Version <span class="script_version">N/A</span>
     </h2>
+    
+    <p>
+        Solana API:
+        <input type="url" id="API_URL" value="" style="width: 360px">
+        <select onclick="let val = $(this).find('option:selected').val(); $('#API_URL').val(val);" style="width: 70px">
+            <option disabled selected>Options:</option>
+            <option value="https://api.mainnet-beta.solana.com">Solana (default)</option>
+            <option value="https://solana-mainnet.gateway.tatum.io">Tatum</option>
+        </select>
+        <button onclick="setApiUrl()"><i class="fa fa-check"></i> Set &amp; reload</button>
+        <button onclick="$('#API_URL').val(''); setApiUrl();"><i class="fa fa-refresh"></i> Reset</button>
+    </p>
     
     <p>
         Your wallet:
@@ -272,6 +286,14 @@
         $('#initial_warning').hide();
     }
     
+    function setApiUrl()
+    {
+        let val = $('#API_URL').val();
+        if( $.trim(val) === '' ) localStorage.removeItem('vkwf_api_url');
+        else                     localStorage.setItem('vkwf_api_url', val);
+        location.reload();
+    }
+    
     $(document).ready(function()
     {
         if( window.location.href !== window.top.location.href )
@@ -288,11 +310,22 @@
         
         $('.script_version').text(script_version);
         
+        if( ! localStorage )
+        {
+            showWarn();
+            return;
+        }
+        
         if( ! sessionStorage )
         {
             showWarn();
             return;
         }
+        
+        let url = localStorage.getItem('vkwf_api_url');
+        if( url ) API_URL = url;
+        $('#API_URL').val(API_URL);
+        connection = new solanaWeb3.Connection(API_URL);
         
         if( sessionStorage.getItem('vkwf_warn_seen') ) return;
         
@@ -611,9 +644,21 @@
     {
         toggleUI('off');
         showProgress("Fetching owned NFTs...");
-        const accounts = await connection.getParsedTokenAccountsByOwner(wallet, {
-            programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID)
-        });
+        
+        let accounts;
+        try
+        {
+            accounts = await connection.getParsedTokenAccountsByOwner(wallet, {
+                programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID)
+            });
+        }
+        catch(e)
+        {
+            alert(`Unable to connect to the Solana API:\n\n${e}\n\nPlease use a different API URL and try again.`);
+            toggleUI('on');
+            hideProgress();
+            return;
+        }
         
         if( ! accounts.value || accounts.value.length <= 0 )
         {

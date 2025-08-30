@@ -1,75 +1,33 @@
 
 # VolkaChain Withdrawal Facility
 
-**Important**: the steps below were made on a topped Ubuntu 24 server.
+This repository holds the source code of a dApp living deployed on the Solana blockchain as NFT
+for withdraw fungible tokens owned by NFTs minted using the Volkachain Tokenizer Framework.
 
-## Preinits
+The dApp can be seen in the [index.html](index.html) file, and the NFT can be found at:
 
-Before starting up, make sure you have Node.js installed.
+https://solscan.io/address/LvWCuijVK4pTp24VTV63UriXHZbLPFcZAwjUERoZrJR
 
-```shell
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+The interface is simple and straightforward.
 
-# Restart session before continuing
+## License
 
-nvm list-remote
+This software is provided as-is and governed by the MIT license.
+You can find it in the [LICENSE](LICENSE.md) file.
 
-# Pick your poison, E.G.
+## Developer/Maintainer
 
-nvm install v22.17.0
+This software is mainained by [LAVA SoftWorks](https://www.lavasoftworks.com).
 
-```
+LAVA SoftWorks is a small company working on IT since 1997 and on the internet since 2000,
+focusing on blockchain-driven solutions since 2014.
 
-## Installing dependencies
+## Information
 
-Just go for
+For more information, please visit the next links:
 
-```shell
-npm install
-```
+- [End user documentation](https://volkachain.tech/tokenizer/withdrawal-facility)
 
-The `install_prereqs.sh` file has the list of packages and versions as reference.
+- [The Volkachain Framework](https://volkachain.tech/tokenizer)
 
-## Install the Solana wallet
-
-```shell
-cd ~
-sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.3/install)"
-
-# Restart SSH session
-```
-
-Then pick your poison:
-
-For devnet:
-
-```shell
-solana config set --url "https://api.devnet.solana.com"
-```
-
-For mainnet:
-
-```shell
-solana config set --url "https://api.mainnet-beta.solana.com"
-```
-
-Then set up a keypair to pay the fees:
-
-```shell
-solana-keygen new --no-bip39-passphrase
-
-# Output:
-#> Wrote new keypair to /home/user/.config/solana/id.json
-#> =============================================================================
-#> pubkey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-#> =============================================================================
-#> Save this seed phrase to recover your new keypair:
-#> xxxx xxxxxxx xxxxxx xxxxxx xxxxxxx xxxxx xxxxx xxxx xxxxx xxxxxxxx xxxxx xxxx
-#> =============================================================================
-```
-
-**Important:** save the pubkey and seed phrase somewhere safe!
-
-## That's all
-
-Now you should be able to run the TS scripts.
+- [Contact for support](https://volkachain.tech/contact)

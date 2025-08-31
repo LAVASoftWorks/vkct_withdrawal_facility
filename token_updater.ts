@@ -11,8 +11,8 @@ import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 import { fetchDigitalAsset, updateMetadataAccountV2, MPL_TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mpl-token-metadata';
 import { mplTokenMetadata } from '@metaplex-foundation/mpl-token-metadata';
 import { createSplAssociatedTokenProgram } from "@metaplex-foundation/mpl-toolbox";
-import { airdropIfRequired, getKeypairFromFile } from "@solana-developers/helpers";
-import { clusterApiUrl, Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { getKeypairFromFile } from "@solana-developers/helpers";
+import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
 import { promises as fs } from "fs";
 import {getUploadPriceInSol} from "./helpers/getUploadPriceInSol";
 import {getTransactionCost} from "./helpers/getTransactionCost";
@@ -21,17 +21,17 @@ import {getTransactionCost} from "./helpers/getTransactionCost";
 // Note: needed vars
 //
 
-const ASSET_ADDRESS          = "2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn";
+const ASSET_ADDRESS          = "LvWCuijVK4pTp24VTV63UriXHZbLPFcZAwjUERoZrJR";
 const TOKEN_METADATA_PROGRAM = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID);
 const NEW_ASSET_FILE         = "index.html";
-const NEW_ASSET_VERSION      = "0.5.0";
+const NEW_ASSET_VERSION      = "1.0.0";
 
 //
-// Segment: load coins for devnet
+// Segment: init connections
 //
 
-// create a new connection to Solana's devnet cluster
-const connection = new Connection(clusterApiUrl("devnet"));
+// create a new connection
+const connection = new Connection(clusterApiUrl("mainnet-beta"));
 
 // load keypair from local file system
 // See https://github.com/solana-developers/helpers?tab=readme-ov-file#get-a-keypair-from-a-keypair-file
@@ -41,11 +41,7 @@ console.log("Starting update token to version", NEW_ASSET_VERSION);
 console.log("Asset:", ASSET_ADDRESS);
 console.log("Loaded user:", user.publicKey.toBase58());
 
-//
-// Segment: init connections
-//
-
-// create a new connection to Solana's devnet cluster
+// create a new connection
 const umi = createUmi(connection).use(irysUploader());
 const umiKeypair = umi.eddsa.createKeypairFromSecretKey(user.secretKey);
 umi.use(keypairIdentity(umiKeypair)).use(mplTokenMetadata());

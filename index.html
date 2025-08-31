@@ -27,19 +27,19 @@
         let wallet          = null; // Will hold the Phantom wallet public key
         let wallet_provider = null;
         let wallet_address  = null;
-        const explorerLink = "https://solscan.io/<endpoint>/<data>?cluster=devnet";
+        const explorerLink = "https://solscan.io/<endpoint>/<data>";
         
-        const PIGGYBANK_PROGRAM_ID = "9ceUd429wyykAeL77fjW57rdn6VhQhFDBwQ3FsTpDcaY"; // Update from the contract build
+        const PIGGYBANK_PROGRAM_ID = "LvPibsi1V7z71Nmqt3pnafDBgaoeMhiwNVDYMdYc2tG";  // Update from the contract build
         const IDL_DISCRIMINATOR    = [183, 18, 70, 156, 148, 109, 161, 34];          // Update from the IDL
-        const TOKEN_REGISTRY_PDA   = "DEFXPUZqWdRztRGJY6mhRYG6esTciM18dRT9zGyjjWD4"; // Update from the registry init script
-        const COLLECTION_REG_PDA   = "9kW48txQptSLC4nN8GwGkNh52mJK7TdaRsktoycrucA6"; // Update from the registry init script
+        const TOKEN_REGISTRY_PDA   = "53ZNFh4G6z1H4XF9bKXsXFntBWKArzU4NKFQGRDo9vmr"; // Update from the registry init script
+        const COLLECTION_REG_PDA   = "DKhbsibDHiFuuPgFg7WHa5pivAvxjKupJyA4t8uVG1kp"; // Update from the registry init script
         const PIGGYBANK_TRAIT_KEY  = "Piggy bank address"; // This is set by the tokenization backend
         const COLLECTION_TRAIT_KEY = "CMRA";                           
         
         const SUPPORTED_TOKENS = {
-            "USDECE": {name: "US Dece token", address: "4k9Frrz9xVmwWeXfavM2byTtamG6h8pZtsyamRaR81bv", decimals: 9},
-            "NODUCK": {name: "No duck token", address: "3ZWuguxLBKzmo1t9vCEPdebfjXKgRS4PRYgsq1pMq9YL", decimals: 9},
-            "SOMEXX": {name: "Some other tk", address: "8C9vSZe4JqeAXaV9j5PjTKMWxE5G2WfWXTbN3ADAMujx", decimals: 9},
+            "NPATO": {name: "NegaPato",        address: "3SLKyhCAgvNsNji8Wx9bWvDm1BJuDrQnE2zZP9fJpump", decimals: 6},
+            "USDC":  {name: "USDC stablecoin", address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals: 6},
+            "BONK":  {name: "Bonk",            address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", decimals: 5},
         };
         
         // v--- Solana predefs ------------
@@ -156,10 +156,10 @@
     </fieldset>
     
     <p id="credits" class="aligncenter">
-        Part of the <i>Volkachain framework</i> by
+        Part of the <a href="https://volkachain.tech/tokenizer" target="_blank">Volkachain Tokenizer Framework</a> by
         <a href="https://www.lavasoftworks.com" target="_blank"><i class="fa-solid fa-volcano fa-fw"></i>LAVA SoftWorks</a>
         •
-        Open sourced at <a href="https://github.com" target="_blank"><i class="fa-brands fa-github fa-fw"></i>GitHub</a>
+        Open sourced at <a href="https://github.com/LAVASoftWorks/vkct_withdrawal_facility" target="_blank"><i class="fa-brands fa-github fa-fw"></i>GitHub</a>
         <br>
         Powered by
         <a href="https://solana.com/docs/clients/javascript" target="_blank"><i class="fa fa-cubes fa-fw"></i>Solana Web3</a>
@@ -207,14 +207,15 @@
             </p>
             <p>
                 <i class="fa fa-warning"></i> <b>Important:</b>
-                This file should be hosted at <b>https://irys.xyz</b>.
+                This file should be hosted at <b>irys.xyz</b>.
                 If the URL on your browser address bar doesn't match, then <b>you're at the wrong location.</b>
             </p>
             <p>
                 <b style="color: red">Never open this file directly.</b>
                 Always go to the NFT and click on the "Website" or "External link" attribute.
                 That link points to the latest version of this file as stored on the Solana blockchain.
-                <a href="https://explorer.solana.com/address/2GHEknBpEFqCcwHQ3pfhtWTWNe4e3qTDtSBiP2HjCmwn?cluster=devnet" target="_top">Go to the NFT profile now <i class="fa fa-external-link"></i></a><br>
+                <a href="https://solscan.io/address/LvWCuijVK4pTp24VTV63UriXHZbLPFcZAwjUERoZrJR" 
+                   target="_top">Go to the NFT profile now <i class="fa fa-external-link"></i></a><br>
                 <b>Bookmark the NFT page, not this one!</b>
             </p>
             <p>
@@ -233,11 +234,12 @@
                 </li>
                 <li>
                     Open the raw content of the latest published version of this page at GitHub on a new tab:
-                    <a href="https://github.com/path/to/repo">github.com/path/to/repo</a>
+                    <a href="https://github.com/LAVASoftWorks/vkct_withdrawal_facility/blob/master/index.html"
+                       target="_blank">github.com/.../blob/master/index.html</a>
                 </li>
                 <li>
                     Open Diffchecker on another tab:
-                    <a href="https://www.diffchecker.com/" target="_blank">www.diffchecker.com</a>
+                    <a href="https://www.diffchecker.com/" target="_blank">diffchecker.com</a>
                 </li>
                 <li>
                     Copy the raw content of the page at GitHub and paste it on the <u>Original text</u> area of DiffChecker.
